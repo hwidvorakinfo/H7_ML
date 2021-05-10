@@ -43,8 +43,8 @@
 
 #define EI_CLASSIFIER_PROJECT_ID                 26031
 #define EI_CLASSIFIER_PROJECT_OWNER              "Petr Dvorak"
-#define EI_CLASSIFIER_PROJECT_NAME               "hwidvorakinfo-project-1"
-#define EI_CLASSIFIER_PROJECT_DEPLOY_VERSION     8
+#define EI_CLASSIFIER_PROJECT_NAME               "H7_SINUS"
+#define EI_CLASSIFIER_PROJECT_DEPLOY_VERSION     13
 #define EI_CLASSIFIER_NN_INPUT_FRAME_SIZE        11
 #define EI_CLASSIFIER_RAW_SAMPLE_COUNT           128
 #define EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME      1
@@ -53,7 +53,7 @@
 #define EI_CLASSIFIER_INPUT_HEIGHT               0
 #define EI_CLASSIFIER_INTERVAL_MS                10
 #define EI_CLASSIFIER_LABEL_COUNT                2
-#define EI_CLASSIFIER_HAS_ANOMALY                0
+#define EI_CLASSIFIER_HAS_ANOMALY                1
 #define EI_CLASSIFIER_FREQUENCY                  100
 #define EI_CLASSIFIER_USE_QUANTIZED_DSP_BLOCK    0
 
@@ -64,7 +64,7 @@
 #define EI_CLASSIFIER_TFLITE_ARENA_SIZE          3635
 #define EI_CLASSIFIER_TFLITE_INPUT_DATATYPE      EI_CLASSIFIER_DATATYPE_INT8
 #define EI_CLASSIFIER_TFLITE_INPUT_QUANTIZED     1
-#define EI_CLASSIFIER_TFLITE_INPUT_SCALE         0.10205594450235367
+#define EI_CLASSIFIER_TFLITE_INPUT_SCALE         0.1589920073747635
 #define EI_CLASSIFIER_TFLITE_INPUT_ZEROPOINT     -128
 #define EI_CLASSIFIER_TFLITE_OUTPUT_DATATYPE     EI_CLASSIFIER_DATATYPE_INT8
 #define EI_CLASSIFIER_TFLITE_OUTPUT_QUANTIZED    1
@@ -178,11 +178,11 @@ typedef struct {
     float pre_cof;
 } ei_dsp_config_audio_syntiant_t;
 
-ei_dsp_config_spectral_analysis_t ei_dsp_config_7 = {
+ei_dsp_config_spectral_analysis_t ei_dsp_config_14 = {
     1,
     1,
     1.00000f,
-    "low",
+    "none",
     3.00000f,
     6,
     128,

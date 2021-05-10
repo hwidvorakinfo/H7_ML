@@ -22,6 +22,10 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "beasth7.h"
+#include "scheduler.h"
+#include "services.h"
+#include "mcuperipherals.h"
+#include "msg_types.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -34,13 +38,14 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
-#define RPMSG_SERVICE_NAME              "openamp_pingpong_demo"
+#define RPMSG_SERVICE_NAME              "BH7_ML"
 /* Private variables ---------------------------------------------------------*/
-static  uint32_t message;
-static volatile int message_received;
-static volatile unsigned int received_data;
+volatile msg_t tx_message;
+volatile msg_t rx_message;
+static volatile int16_t received_data;
+static volatile uint16_t message_received;
 
-static struct rpmsg_endpoint rp_endpoint;
+volatile struct rpmsg_endpoint rp_endpoint;
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private functions ---------------------------------------------------------*/
@@ -49,21 +54,28 @@ HSEM_TypeDef * HSEM_DEBUG= HSEM;
 
 static int rpmsg_recv_callback(struct rpmsg_endpoint *ept, void *data, size_t len, uint32_t src, void *priv)
 {
-  received_data = *((unsigned int *) data);
-  message_received = 1;
+//	received_data = *((unsigned int *) data);
+//	message_received = 1;
 
-  return 0;
+	memcpy((void *)&rx_message, data, len);
+	received_data = len;
+	message_received = 1;
+
+	return 0;
 }
 
 unsigned int receive_message(void)
 {
-  while (message_received == 0)
-  {
-    OPENAMP_check_for_message();
-  }
-  message_received = 0;
-
-  return received_data;
+	if (message_received == 0)
+	{
+		OPENAMP_check_for_message();
+		return 0;
+	}
+	else
+	{
+		message_received = 0;
+		return received_data;
+	}
 }
 
 
@@ -74,65 +86,54 @@ unsigned int receive_message(void)
   */
 int main(void)
 {
-  int32_t status = 0;
+	volatile int32_t status = 0;
 
-  /*HW semaphore Clock enable*/
-  __HAL_RCC_HSEM_CLK_ENABLE();
-  /*HW semaphore Notification enable*/
-  HAL_HSEM_ActivateNotification(__HAL_HSEM_SEMID_TO_MASK(HSEM_ID_0));
+	__HAL_RCC_HSEM_CLK_ENABLE();												// HW semaphore Clock enable
+	HAL_HSEM_ActivateNotification(__HAL_HSEM_SEMID_TO_MASK(HSEM_ID_0));			// HW semaphore Notification enable
 
-  /* When system initialization is finished, Cortex-M7 will release Cortex-M4  by means of
-  HSEM notification */
-  HAL_PWREx_ClearPendingEvent();
-  HAL_PWREx_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFE, PWR_D2_DOMAIN);
+	HAL_PWREx_ClearPendingEvent();												// When system initialization is finished, Cortex-M7 will release Cortex-M4  by means of HSEM notification
+	HAL_PWREx_EnterSTOPMode(PWR_MAINREGULATOR_ON, PWR_STOPENTRY_WFE, PWR_D2_DOMAIN);
 
-  /* Initialize HAL : systick*/
-  if (HAL_Init() != HAL_OK)
-  {
-	Error_Handler();
-  }
+	// Initialize HAL : systick
+	if (HAL_Init() != HAL_OK)
+	{
+		Error_Handler();
+	}
 
-  /*Clear Flags generated during the wakeup notification */
-  HSEM_COMMON->ICR |= ((uint32_t)__HAL_HSEM_SEMID_TO_MASK(HSEM_ID_0));
-  HAL_NVIC_ClearPendingIRQ(HSEM2_IRQn);
+	HSEM_COMMON->ICR |= ((uint32_t)__HAL_HSEM_SEMID_TO_MASK(HSEM_ID_0));		// Clear Flags generated during the wakeup notification
+	HAL_NVIC_ClearPendingIRQ(HSEM2_IRQn);
 
-  /* Add Cortex-M4 user application code here */
+	/* Add Cortex-M4 user application code here */
+	Scheduler_init();															// inicializace kooperativniho scheduleru a jeho odstartovani
+	Scheduler_start();															// nyni je jiz mozne zakladat tasky
+	mcuperipherals_init();														// inicializace periferii MCU
 
-  /* Inilitize the mailbox use notify the other core on new message */
-  MAILBOX_Init();
+	MAILBOX_Init();																// Inilitize the mailbox use notify the other core on new message
+	if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != HAL_OK)							// Inilitize OpenAmp and libmetal libraries as RPMSG_REMOTE
+	{
+		Error_Handler();
+	}
 
-  /* Inilitize OpenAmp and libmetal libraries */
-  if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != HAL_OK)
-  {
-	Error_Handler();
-  }
-
-  /* create a endpoint for rmpsg communication */
-  status = OPENAMP_create_endpoint(&rp_endpoint, RPMSG_SERVICE_NAME, RPMSG_ADDR_ANY, rpmsg_recv_callback, NULL);
-  if (status < 0)
-  {
-	Error_Handler();
-  }
-
-  /* Pingpong application*/
-  /* Reveice an interger from the master, increment it and send back the result to the master*/
-  while (message < 100)
-  {
-	message = receive_message();
-	message++;
-	status = OPENAMP_send(&rp_endpoint, &message, sizeof(message));
+	/* create a endpoint for rmpsg communication */
+	status = OPENAMP_create_endpoint(&rp_endpoint, RPMSG_SERVICE_NAME, RPMSG_ADDR_ANY, rpmsg_recv_callback, NULL);
 	if (status < 0)
 	{
-	  Error_Handler();
+		Error_Handler();
 	}
-  }
 
-  /* Deinitialize OpenAMP */
-  OPENAMP_DeInit();
+	if(Scheduler_Add_Task(Receive_service, 0, RECEIVE_SERVICE_PERIOD) == SCH_MAX_TASKS)
+	{
+		// chyba pri zalozeni service
+		return RETURN_ERROR;
+	}
 
-  while(1)
-  {
-  }
+	while(1)
+	{
+		Scheduler_Dispatch_Tasks();						// sprava tasku - spousti tasky, maze neplatne tasky
+	}
+
+	/* Deinitialize OpenAMP */
+	OPENAMP_DeInit();
 
 //  /* -1- Initialize LEDs mounted on the board */
 //  LEDD_GPIO_CLK_ENABLE();
@@ -183,11 +184,11 @@ int main(void)
   */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {  
-  if (GPIO_Pin == BUTTON1_PIN)
-  {
-	  /* Toggle LEDD */
-	  HAL_GPIO_TogglePin(LEDD_GPIO_PORT, LEDD_PIN);
-  }
+	if (GPIO_Pin == BUTTON1_PIN)
+	{
+		/* Toggle LEDD */
+		HAL_GPIO_TogglePin(LEDD_GPIO_PORT, LEDD_PIN);
+	}
 }
 
 /**
@@ -197,10 +198,10 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 */
 void Error_Handler(void)
 {
-  /* User may add here some code to deal with this error */
-  while(1)
-  {
-  }
+	/* User may add here some code to deal with this error */
+	while(1)
+	{
+	}
 }
 
 #ifdef  USE_FULL_ASSERT

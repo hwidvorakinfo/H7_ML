@@ -22,7 +22,6 @@
 #include "stm32h7xx_it.h"
 #include "beasth7.h"
 #include "cmsis_os.h"
-#include "uart_hal_cm7.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -190,17 +189,6 @@ void HSEM1_IRQHandler(void)
   HAL_HSEM_IRQHandler();
 }
 
-/**
-  * @brief  This function handles UART interrupt request.
-  * @param  None
-  * @retval None
-  * @Note   This function is redefined in "main.h" and related to DMA stream
-  *         used for USART data transmission
-  */
-void USARTx_IRQHandler(void)
-{
-  HAL_UART_IRQHandler(&Uart1Handle);
-}
 
 /**
   * @}

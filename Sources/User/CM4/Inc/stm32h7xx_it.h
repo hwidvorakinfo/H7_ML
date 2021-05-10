@@ -40,10 +40,11 @@ void SVC_Handler(void);
 void DebugMon_Handler(void);
 void PendSV_Handler(void);
 void SysTick_Handler(void);
-//void CM7_SEV_IRQHandler(void);
+
 void EXTI2_IRQHandler(void);
 void EXTI3_IRQHandler(void);
 void HSEM2_IRQHandler(void);
+void USARTUSB_IRQHandler(void);
 
 #ifdef __cplusplus
 }

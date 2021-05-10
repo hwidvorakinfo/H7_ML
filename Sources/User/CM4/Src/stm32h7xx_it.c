@@ -21,7 +21,8 @@
 #include "main.h"
 #include "stm32h7xx_it.h"
 #include "beasth7.h"
-
+#include "scheduler.h"
+#include "uart_hal_cm4.h"
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
   */
@@ -138,6 +139,8 @@ void PendSV_Handler(void)
 void SysTick_Handler(void)
 {
   HAL_IncTick();
+
+  Run_scheduler();
 }
 
 /******************************************************************************/
@@ -196,6 +199,18 @@ void HSEM2_IRQHandler(void)
 {
   HAL_HSEM_IRQHandler();
 
+}
+
+/**
+  * @brief  This function handles UART interrupt request.
+  * @param  None
+  * @retval None
+  * @Note   This function is redefined in "main.h" and related to DMA stream
+  *         used for USART data transmission
+  */
+void USARTUSB_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&Uart1Handle);
 }
 /**
   * @}

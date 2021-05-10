@@ -30,6 +30,9 @@
 #include "uart_hal_cm7.h"
 #include "crc_hal_cm7.h"
 #include "error_handler.h"
+#include "errorcodes.h"
+#include "msg_types.h"
+#include "arm_common_tables.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -42,18 +45,22 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private macro -------------------------------------------------------------*/
-#define RPMSG_CHAN_NAME              "openamp_pingpong_demo"
+#define RPMSG_CHAN_NAME              "BH7_ML"
 /* Private variables ---------------------------------------------------------*/
-static  uint32_t message = 0;
+static volatile msg_t tx_message;
+static volatile msg_t rx_message;
+static volatile int16_t received_data;
+
+static volatile uint8_t flag = 0;
 static volatile int message_received;
 static volatile int service_created;
-static volatile unsigned int received_data;
 static struct rpmsg_endpoint rp_endpoint;
 
 osSemaphoreId osSemaphore_ChannelCreation;
 osSemaphoreId osSemaphore_MessageReception;
 
-static bool debug_nn = false; // Set this to true to see e.g. features generated from the raw signal
+static bool debug_nn = true; // Set this to true to see e.g. features generated from the raw signal
+static int16_t array[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];
 
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
@@ -62,7 +69,11 @@ static void EXTI2_IRQHandler_Config(void);
 //static void Error_Handler(void);
 static void MPU_Config(void);
 static void SystemClock_Config(void);
-static void Thread_PingPong(void const *argument);
+static void Thread_Init(void const *argument);
+static void Thread_ReadMailbox(void const *argument);
+
+osThreadDef(Thread0, Thread_Init, osPriorityLow, 0, appliSTACK_SIZE);
+osThreadDef(Thread1, Thread_ReadMailbox, osPriorityNormal, 1, configMINIMAL_STACK_SIZE);
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -70,9 +81,11 @@ static void Thread_PingPong(void const *argument);
 
 static int rpmsg_recv_callback(struct rpmsg_endpoint *ept, void *data, size_t len, uint32_t src, void *priv)
 {
-  received_data = *((unsigned int *) data);
+  //received_data = *((unsigned int *) data);
+	memcpy((void *)&rx_message, data, len);
+	received_data = len;
 
-  osSemaphoreRelease(osSemaphore_MessageReception);
+  //osSemaphoreRelease(osSemaphore_MessageReception);
 
   return 0;
 }
@@ -84,7 +97,7 @@ unsigned int receive_message(void)
 
   while (received_data == -1U)
   {
-    status = osSemaphoreWait(osSemaphore_MessageReception , 0xffff);
+    //status = osSemaphoreWait(osSemaphore_MessageReception , 0xffff);
 
     if (status != osOK)
       break;
@@ -111,10 +124,15 @@ void new_service_cb(struct rpmsg_device *rdev, const char *name, uint32_t dest)
 
 void vprint(const char *fmt, va_list argp)
 {
-    char string[200];
+    char string[MSG_PAYLOAD_LENGTH];
     if(0 < vsprintf(string, fmt, argp)) // build string
     {
-        HAL_UART_Transmit(&Uart1Handle, (uint8_t*)string, strlen(string), 0xffffff); 		// send message via UART
+        //HAL_UART_Transmit(&Uart1Handle, (uint8_t*)string, strlen(string), 0xffffff); 		// send message via UART
+
+    	tx_message.cmd = MSG_UART_MSG;
+    	memcpy((void *)&tx_message.data, string, strlen((const char *)string));
+    	tx_message.length = strlen((const char *)string);
+    	OPENAMP_send(&rp_endpoint, (const void *)&tx_message, sizeof(tx_message));
     }
 }
 
@@ -131,8 +149,47 @@ void ei_printf(const char *format, ...)
  */
 static int get_signal_data(size_t offset, size_t length, float *out_ptr)
 {
-	static int16_t array[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];
-	memset(&array, 10, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
+	// idle simulation
+//	memset(&array, 0, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
+
+	// triangle
+	uint16_t i;
+	int16_t value = 0;
+	for (i = 0; i < length/4; i++)
+	{
+		array[i] = value;
+		value += 500;
+	}
+	for (i = length/4; i < length/2; i++)
+	{
+		array[i] = value;
+		value -= 500;
+	}
+	for (i = length/2; i < 3*length/4; i++)
+	{
+		array[i] = value;
+		value += 500;
+	}
+	for (i = 3*length/4; i < length; i++)
+	{
+		array[i] = value;
+		value -= 500;
+	}
+
+//	// sinus
+//	uint16_t i;
+//	uint16_t index = 0;
+//	for (i = 0; i < length/2; i++)
+//	{
+//		array[i] = (int16_t)(30000*sinTable_f32[index]);
+//		index += 8;
+//	}
+//	index = 0;
+//	for (i = length/2; i < length; i++)
+//	{
+//		array[i] = (int16_t)(30000*sinTable_f32[index]);
+//		index += 8;
+//	}
 
 	numpy::int16_to_float(array, out_ptr, length);
 
@@ -167,6 +224,7 @@ int main(void)
        - Low Level Initialization
      */
 
+  // pockej, nez nastartuje CM4 svuj kod
   while (__HAL_RCC_GET_FLAG(RCC_FLAG_D2CKRDY) != RESET)
   {
 	  asm("nop");
@@ -196,17 +254,17 @@ int main(void)
      HSEM notification. Cortex-M4 release could be also ensured by any Domain D2 wakeup source (SEV,EXTI..).
   */
 
-  if (uart_config() != RETURN_OK)
-  {
-    Error_Handler();
-  }
+//  if (uart_config() != RETURN_OK)
+//  {
+//    Error_Handler();
+//  }
 
   if (crc_config() != RETURN_OK)
   {
 	  Error_Handler();
   }
 
-//	ei_printf("Inferencing settings:\r\n");
+//	ei_printf("\r\nInferencing settings:\r\n");
 //	ei_printf("\tInterval: %.2f ms.\r\n", (float)EI_CLASSIFIER_INTERVAL_MS);
 //	ei_printf("\tFrame size: %d\r\n", EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
 //	ei_printf("\tSample length: %d ms.\r\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT / 16);
@@ -214,18 +272,19 @@ int main(void)
 //
 //	int print_results = -(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW);
 //
-//	while (1)
-//	{
+////	while (1)
+////	{
 //	  // Do classification (i.e. the inference part)
 //	  signal_t signal;
 //	  signal.total_length = EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE;
 //	  signal.get_data = &get_signal_data;
 //	  ei_impulse_result_t result = { 0 };
-//	  EI_IMPULSE_ERROR r = run_classifier_continuous(&signal, &result, debug_nn);
+//	  //EI_IMPULSE_ERROR r = run_classifier_continuous(&signal, &result, debug_nn);
+//	  EI_IMPULSE_ERROR r = run_classifier(&signal, &result, debug_nn);
 //	  if (r != EI_IMPULSE_OK)
 //	  {
 //		  ei_printf("ERROR: Failed to run classifier (%d)\r\n", r);
-//		  break;
+////		  break;
 //	  }
 //
 //	  // Print output predictions
@@ -239,11 +298,10 @@ int main(void)
 //		  }
 //		  print_results = 0;
 //	  }
-//	}
+////	}
 
   /* -1- Initialize LEDs mounted on BeastH7 board */
   LEDA_GPIO_CLK_ENABLE();
-
   GPIO_InitTypeDef gpio_init_structure;
   gpio_init_structure.Mode = GPIO_MODE_OUTPUT_PP;
   gpio_init_structure.Pull = GPIO_PULLUP;
@@ -252,8 +310,6 @@ int main(void)
   HAL_GPIO_Init(LEDA_GPIO_PORT, &gpio_init_structure);
   HAL_GPIO_WritePin(LEDA_GPIO_PORT, LEDA_PIN, GPIO_PIN_SET);
 
-  HAL_GPIO_TogglePin(LEDA_GPIO_PORT, LEDA_PIN);
-  HAL_GPIO_TogglePin(LEDA_GPIO_PORT, LEDA_PIN);
 
   /* Define used semaphore */
   osSemaphoreDef(CHN_CREAT);
@@ -263,9 +319,8 @@ int main(void)
   osSemaphore_ChannelCreation  = osSemaphoreCreate(osSemaphore(CHN_CREAT) , 1);
   osSemaphore_MessageReception = osSemaphoreCreate(osSemaphore(MSG_RECPT) , 1);
 
-  /* Create the Thread that toggle LED1 */
-  osThreadDef(Thread0, Thread_PingPong, osPriorityNormal, 0, appliSTACK_SIZE);
   osThreadCreate(osThread(Thread0), NULL);
+  osThreadCreate(osThread(Thread1), NULL);
 
   /* Start scheduler */
   osKernelStart();
@@ -278,19 +333,27 @@ int main(void)
 }
 
 /**
-  * @brief  Semaphore Test.
+  * @brief  thread0 function body
   * @param  argument: Not used
   * @retval None
   */
-static void Thread_PingPong(void const *argument)
+static void Thread_Init(void const *argument)
 {
   int32_t status;
   int32_t timeout;
+  volatile osThreadId id;
 
   /* Initialize the mailbox use notify the other core on new message */
   MAILBOX_Init();
 
-  /* After starting the FreeRTOS kernel, Cortex-M7 will release Cortex-M4  by means of HSEM notification */
+  /* Initialize the rpmsg endpoint to set default addresses to RPMSG_ADDR_ANY */
+  rpmsg_init_ept(&rp_endpoint, RPMSG_CHAN_NAME, RPMSG_ADDR_ANY, RPMSG_ADDR_ANY, NULL, NULL);
+
+  /* Initialize OpenAmp and libmetal libraries as RPMSG_MASTER */
+  if (MX_OPENAMP_Init(RPMSG_MASTER, new_service_cb) != HAL_OK)
+  {
+    Error_Handler();
+  }
 
   /*HW semaphore Clock enable*/
   __HAL_RCC_HSEM_CLK_ENABLE();
@@ -308,60 +371,70 @@ static void Thread_PingPong(void const *argument)
     Error_Handler();
   }
 
-  /* Initialize the rpmsg endpoint to set default addresses to RPMSG_ADDR_ANY */
-  rpmsg_init_ept(&rp_endpoint, RPMSG_CHAN_NAME, RPMSG_ADDR_ANY, RPMSG_ADDR_ANY, NULL, NULL);
-
-  /* Initialize OpenAmp and libmetal libraries */
-  if (MX_OPENAMP_Init(RPMSG_MASTER, new_service_cb) != HAL_OK)
-  {
-    Error_Handler();
-  }
-
   /*
    * The rpmsg service is initiate by the remote processor, on M7 new_service_cb
    * callback is received on service creation. Wait for the callback
    */
   OPENAMP_Wait_EndPointready(&rp_endpoint);
 
-  /* Send the massage to the remote CPU */
-  status = OPENAMP_send(&rp_endpoint, &message, sizeof(message));
+  // odesli zpravu o priprave na komunikaci
+  tx_message.cmd = MSG_COMM_BIND;
+  tx_message.length = 0;
+  status = OPENAMP_send(&rp_endpoint, (const void *)&tx_message, sizeof(tx_message));
   osDelay(1);
 
   if (status < 0)
   {
-    Error_Handler();
+	  Error_Handler();
   }
 
-  while (message < 100)
+  flag = 10;
+
+  while (1)
   {
-   /* Receive the massage from the remote CPU */
-    message = receive_message();
-    message++;
+	  osDelay(1000);
 
-   /* Send the massage to the remote CPU */
-    status = OPENAMP_send(&rp_endpoint, &message, sizeof(message));
-    osDelay(1);
+//	  uint8_t text[] = "AL";
+//	  tx_message.cmd = MSG_UART_MSG;
+//	  memcpy((void *)&tx_message.data, text, strlen((const char *)text));
+//	  tx_message.length = strlen((const char *)text);
+//	  OPENAMP_send(&rp_endpoint, (const void *)&tx_message, sizeof(tx_message));
 
-    if (status < 0)
-    {
-      Error_Handler();
-    }
+	  ei_printf("\r\nAL");
   }
+}
 
-  /* wait that service is destroyed on remote side */
-  while(service_created)
-  {
-    OPENAMP_check_for_message();
-  }
 
-  /* Deinitialize OpenAMP */
-  OPENAMP_DeInit();
+/**
+  * @brief  thread1 function body
+  * @param  argument: Not used
+  * @retval None
+  */
+static void Thread_ReadMailbox(void const *argument)
+{
+	static volatile uint16_t len = 0;
 
-  while(1)
-  {
-	  HAL_GPIO_TogglePin(LEDA_GPIO_PORT, LEDA_PIN);
-	  osDelay(400);
-  }
+	while (1)
+	{
+		while (flag != 10)
+		{
+			osDelay(1);
+		}
+
+		/* Receive the message from the remote CPU */
+		len = receive_message();
+
+		if (len != 0)
+		{
+			if (rx_message.cmd == MSG_LED_TOGGLE)
+			{
+				HAL_GPIO_TogglePin(LEDA_GPIO_PORT, LEDA_PIN);
+				//osDelay(400);
+				len = 0;
+			}
+		}
+		osDelay(1);
+	}
 }
  
 /**
