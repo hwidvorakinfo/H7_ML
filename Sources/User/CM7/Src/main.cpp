@@ -32,6 +32,7 @@
 #include "error_handler.h"
 #include "errorcodes.h"
 #include "msg_types.h"
+#include "amp_messaging_cm7.h"
 #include "arm_common_tables.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
@@ -47,17 +48,11 @@
 /* Private macro -------------------------------------------------------------*/
 #define RPMSG_CHAN_NAME              "BH7_ML"
 /* Private variables ---------------------------------------------------------*/
-static volatile msg_t tx_message;
-static volatile msg_t rx_message;
-static volatile int16_t received_data;
 
-static volatile uint8_t flag = 0;
-static volatile int message_received;
-static volatile int service_created;
-static struct rpmsg_endpoint rp_endpoint;
+extern struct rpmsg_endpoint rp_endpoint;
 
 osSemaphoreId osSemaphore_ChannelCreation;
-osSemaphoreId osSemaphore_MessageReception;
+static volatile uint8_t flag = 0;
 
 static bool debug_nn = true; // Set this to true to see e.g. features generated from the raw signal
 static int16_t array[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];
@@ -79,62 +74,6 @@ osThreadDef(Thread1, Thread_ReadMailbox, osPriorityNormal, 1, configMINIMAL_STAC
 
 #define SDRAM_BASE_ADDR        0xD0000000
 
-static int rpmsg_recv_callback(struct rpmsg_endpoint *ept, void *data, size_t len, uint32_t src, void *priv)
-{
-  //received_data = *((unsigned int *) data);
-	memcpy((void *)&rx_message, data, len);
-	received_data = len;
-
-  //osSemaphoreRelease(osSemaphore_MessageReception);
-
-  return 0;
-}
-
-unsigned int receive_message(void)
-{
-  received_data = -1U;
-  uint32_t status = 0;
-
-  while (received_data == -1U)
-  {
-    //status = osSemaphoreWait(osSemaphore_MessageReception , 0xffff);
-
-    if (status != osOK)
-      break;
-
-    OPENAMP_check_for_message();
-  }
-
-  return received_data;
-}
-
-void service_destroy_cb(struct rpmsg_endpoint *ept)
-{
-  /* this function is called while remote endpoint as been destroyed, the
-   * service is no more available
-   */
-}
-
-void new_service_cb(struct rpmsg_device *rdev, const char *name, uint32_t dest)
-{
-  /* create a endpoint for rmpsg communication */
-  OPENAMP_create_endpoint(&rp_endpoint, name, dest, rpmsg_recv_callback, service_destroy_cb);
-  osSemaphoreRelease(osSemaphore_ChannelCreation);
-}
-
-void vprint(const char *fmt, va_list argp)
-{
-    char string[MSG_PAYLOAD_LENGTH];
-    if(0 < vsprintf(string, fmt, argp)) // build string
-    {
-        //HAL_UART_Transmit(&Uart1Handle, (uint8_t*)string, strlen(string), 0xffffff); 		// send message via UART
-
-    	tx_message.cmd = MSG_UART_MSG;
-    	memcpy((void *)&tx_message.data, string, strlen((const char *)string));
-    	tx_message.length = strlen((const char *)string);
-    	OPENAMP_send(&rp_endpoint, (const void *)&tx_message, sizeof(tx_message));
-    }
-}
 
 void ei_printf(const char *format, ...)
 {
@@ -233,15 +172,6 @@ int main(void)
   /* Configure the MPU attributes as Write Through for SDRAM*/
   MPU_Config();
 
-//  volatile uint32_t *sdram_addr = (uint32_t *)SDRAM_BASE_ADDR;
-//  volatile uint32_t value = 0x01;
-//  uint32_t i;
-//  for (i = 0; i < 128; i++)
-//  {
-//	  *sdram_addr++ = value++;
-//  }
-//  value = *sdram_addr;
-
   if (HAL_Init() != HAL_OK)
   {
     Error_Handler();
@@ -253,11 +183,6 @@ int main(void)
   /* When system initialization is finished, Cortex-M7 will release (wakeup) Cortex-M4  by means of 
      HSEM notification. Cortex-M4 release could be also ensured by any Domain D2 wakeup source (SEV,EXTI..).
   */
-
-//  if (uart_config() != RETURN_OK)
-//  {
-//    Error_Handler();
-//  }
 
   if (crc_config() != RETURN_OK)
   {
@@ -313,11 +238,9 @@ int main(void)
 
   /* Define used semaphore */
   osSemaphoreDef(CHN_CREAT);
-  osSemaphoreDef(MSG_RECPT);
 
   /* Create the semaphore */
   osSemaphore_ChannelCreation  = osSemaphoreCreate(osSemaphore(CHN_CREAT) , 1);
-  osSemaphore_MessageReception = osSemaphoreCreate(osSemaphore(MSG_RECPT) , 1);
 
   osThreadCreate(osThread(Thread0), NULL);
   osThreadCreate(osThread(Thread1), NULL);
@@ -327,9 +250,6 @@ int main(void)
 
   /* We should never get here as control is now taken by the scheduler */
   for (;;);
-
-  /* -2- Configure EXTI2 (connected to PD.2 pin) to interrupt CPU1 and CPU2 */
-//  EXTI2_IRQHandler_Config();
 }
 
 /**
@@ -341,7 +261,6 @@ static void Thread_Init(void const *argument)
 {
   int32_t status;
   int32_t timeout;
-  volatile osThreadId id;
 
   /* Initialize the mailbox use notify the other core on new message */
   MAILBOX_Init();
@@ -378,10 +297,7 @@ static void Thread_Init(void const *argument)
   OPENAMP_Wait_EndPointready(&rp_endpoint);
 
   // odesli zpravu o priprave na komunikaci
-  tx_message.cmd = MSG_COMM_BIND;
-  tx_message.length = 0;
-  status = OPENAMP_send(&rp_endpoint, (const void *)&tx_message, sizeof(tx_message));
-  osDelay(1);
+  status = amp_send_message(MSG_COMM_BIND, NULL, 0);
 
   if (status < 0)
   {
@@ -393,26 +309,19 @@ static void Thread_Init(void const *argument)
   while (1)
   {
 	  osDelay(1000);
-
-//	  uint8_t text[] = "AL";
-//	  tx_message.cmd = MSG_UART_MSG;
-//	  memcpy((void *)&tx_message.data, text, strlen((const char *)text));
-//	  tx_message.length = strlen((const char *)text);
-//	  OPENAMP_send(&rp_endpoint, (const void *)&tx_message, sizeof(tx_message));
-
 	  ei_printf("\r\nAL");
   }
 }
 
 
 /**
-  * @brief  thread1 function body
+  * @brief  OpenAMP receive message thread
   * @param  argument: Not used
   * @retval None
   */
 static void Thread_ReadMailbox(void const *argument)
 {
-	static volatile uint16_t len = 0;
+	static volatile int16_t len = 0;
 
 	while (1)
 	{
@@ -422,16 +331,12 @@ static void Thread_ReadMailbox(void const *argument)
 		}
 
 		/* Receive the message from the remote CPU */
-		len = receive_message();
+		len = amp_receive_message();
 
 		if (len != 0)
 		{
-			if (rx_message.cmd == MSG_LED_TOGGLE)
-			{
-				HAL_GPIO_TogglePin(LEDA_GPIO_PORT, LEDA_PIN);
-				//osDelay(400);
-				len = 0;
-			}
+			amp_message_decode();
+			len = 0;
 		}
 		osDelay(1);
 	}
