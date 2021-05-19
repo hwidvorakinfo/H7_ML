@@ -23,6 +23,8 @@
 #include "beasth7.h"
 #include "scheduler.h"
 #include "uart_hal_cm4.h"
+#include "adc_hal_cm4.h"
+
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
   */
@@ -212,6 +214,18 @@ void USARTUSB_IRQHandler(void)
 {
   HAL_UART_IRQHandler(&Uart1Handle);
 }
+
+/**
+* @brief  This function handles DMA1_Stream1_IRQHandler interrupt request.
+* @param  None
+* @retval None
+*/
+void DMA1_Stream1_IRQHandler(void)
+{
+  HAL_DMA_IRQHandler(AdcHandle.DMA_Handle);
+}
+
+
 /**
   * @}
   */

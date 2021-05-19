@@ -57,6 +57,34 @@
 
 #endif // UART_ENABLED
 
+// vstupy ADC
+#define ADC_INIT
+#ifdef ADC_INIT
+
+#define ADC                    		  ADC1
+#define ADC_CLK_ENABLE()              __HAL_RCC_ADC12_CLK_ENABLE()
+#define ADC_CHANNEL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOC_CLK_ENABLE()
+#define ADC_CHANNEL_PIN_CLK_ENABLE()  __HAL_RCC_GPIOC_CLK_ENABLE()
+
+// port PAx
+
+
+// port PBx
+
+// port PCx
+#define INPUT1_ADC_PIN                GPIO_PIN_0
+#define INPUT2_ADC_PIN                GPIO_PIN_1
+#define INPUT3_ADC_PIN                GPIO_PIN_2
+#define ADC_CHANNEL_PINS			  INPUT1_ADC_PIN | INPUT2_ADC_PIN | INPUT3_ADC_PIN
+#define ADC_GPIO_PORT       		  GPIOC
+
+#define INPUT1_CHANNEL                ADC_CHANNEL_10
+#define INPUT2_CHANNEL                ADC_CHANNEL_11
+#define INPUT3_CHANNEL                ADC_CHANNEL_12
+
+// DMA+ADC
+
+#endif // ADC_INIT
 
 #ifdef __cplusplus
 }

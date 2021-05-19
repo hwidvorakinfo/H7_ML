@@ -11,6 +11,7 @@
 //#include "gpio.h"
 //#include "timer.h"
 #include "uart_hal_cm4.h"
+#include "adc_hal_cm4.h"
 //#include "i2c.h"
 //#include "spi.h"
 //#include "application.h"
@@ -28,6 +29,12 @@ void mcuperipherals_init(void)
 	{
 	    Error_Handler();
 	}
+
+	if (adc_dma_config() != RETURN_OK)
+	{
+		Error_Handler();
+	}
+
 
 	//i2c_init();
 }

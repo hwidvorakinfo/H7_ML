@@ -147,7 +147,7 @@ int main(void)
   */
   
   /* Enable the CPU Cache */
-////  CPU_CACHE_Enable();
+	CPU_CACHE_Enable();
   
   // enable debug in stop mode for all domains
   DBGMCU->CR |= 0x0070003F;
@@ -296,6 +296,8 @@ static void Thread_Init(void const *argument)
    */
   OPENAMP_Wait_EndPointready(&rp_endpoint);
 
+  amp_set_status(MESSAGING_ALIVE);
+
   // odesli zpravu o priprave na komunikaci
   status = amp_send_message(MSG_COMM_BIND, NULL, 0);
 
@@ -309,7 +311,8 @@ static void Thread_Init(void const *argument)
   while (1)
   {
 	  osDelay(1000);
-	  ei_printf("\r\nAL");
+	  //ei_printf("\r\nAL");
+	  amp_send_alive_message();
   }
 }
 
@@ -448,10 +451,10 @@ static void SystemClock_Config(void)
 static void CPU_CACHE_Enable(void)
 {
   /* Enable I-Cache */
-  SCB_EnableICache();
+//  SCB_EnableICache();
   
   /* Enable D-Cache */
-  SCB_EnableDCache();
+//  SCB_EnableDCache();
 }
 
 /**

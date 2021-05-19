@@ -17,16 +17,28 @@
 
 #define MSG_PAYLOAD_LENGTH				256
 
+// typy zprav podle CMD
 #define MSG_COMM_BIND					0xA000
+#define MSG_COMM_ALIVE					0xA001
 #define MSG_LED_TOGGLE					0xB000
 #define MSG_UART_MSG					0xC000
 
+// status openamp messaging systemu
+typedef enum {
+	MESSAGING_INIT = 0,
+	MESSAGING_ALIVE,
+	MESSAGING_TIMEDOUT,
+} AMP_MESSAGING_STATUS;
 
 typedef struct {
-	uint16_t id;
-	uint16_t cmd;
+ 	uint16_t id;
+ 	uint16_t cmd;
+ 	uint16_t length;
+ } msg_header_t;
+
+typedef struct {
+	msg_header_t header;
 	uint8_t data[MSG_PAYLOAD_LENGTH];
-	uint16_t length;
 } msg_t;
 
 #ifdef __cplusplus

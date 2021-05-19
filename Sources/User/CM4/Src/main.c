@@ -58,6 +58,7 @@ static int rpmsg_recv_callback(struct rpmsg_endpoint *ept, void *data, size_t le
 //	message_received = 1;
 
 	memcpy((void *)&rx_message, data, len);
+
 	received_data = len;
 	message_received = 1;
 

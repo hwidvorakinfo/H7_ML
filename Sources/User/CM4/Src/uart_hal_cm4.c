@@ -10,6 +10,7 @@
 #include "uart_hal_cm4.h"
 #include "defs.h"
 #include "error_handler.h"
+#include "services.h"
 
 UART_HandleTypeDef Uart1Handle;
 volatile usart_data_tx_t Tx1;
@@ -17,7 +18,7 @@ volatile usart_data_rx_t Rx1;
 static volatile uint8_t Tx1_buffer[TX1BUFFERSIZE];
 static volatile uint8_t Rx1_buffer[RX1BUFFERSIZE];
 
-uint8_t hello_message[] = "\n\r-= BeastH7! =-";
+uint8_t hello_message[] = "\n\r-= BeastH7! =-\r\n";
 
 /* UART configured as follows:
       - Word Length = 8 Bits (7 data bit + 1 parity bit) :
@@ -116,10 +117,37 @@ RETURN_STATUS uart1_send_message(uint8_t *text, uint16_t len)
 }
 #endif // UART1_ENABLED
 
+#ifdef UART1_ENABLED
+RETURN_STATUS uart1_new_line(void)
+{
+	usart_wait_until_sent((usart_data_tx_t *)&Tx1);
+
+	Tx1.buffer[0] = '\r';
+	Tx1.buffer[1] = '\n';
+	Tx1.index = 0;
+	Tx1.length = 2;
+	Tx1.status = TRANSFERING;
+
+	if(HAL_UART_Transmit_IT(&Uart1Handle, (uint8_t*)Tx1.buffer, 2) != HAL_OK)
+	{
+		/* Transfer error in transmission process */
+		Error_Handler();
+	}
+	return RETURN_OK;
+}
+#endif // UART1_ENABLED
+
 void usart_wait_until_sent(usart_data_tx_t *buffer)
 {
+	volatile uint16_t timeout = 0xffff;
+
 	while (buffer->status == TRANSFERING)
-	{;}
+	{
+		if (timeout-- == 0)
+		{
+			break;
+		}
+	}
 }
 
 RETURN_STATUS uart_unconfig(void)
@@ -170,19 +198,24 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 	{
 		Rx1.status = RECEIVING;
 
-	// textovy mod
+		// textovy mod
+
 		if ((Rx1.buffer[Rx1.length] != '\n') && (Rx1.buffer[Rx1.length] != '\r'))
 		{
 			Rx1.length++;
-			if(HAL_UART_Receive_IT(&Uart1Handle, (uint8_t *)&Rx1.buffer[Rx1.length], 1) != HAL_OK)
-			{
-				Error_Handler();
-			}
+
 			// posli prijaty znak jako echo
 			Tx1.index = 0;
 			Tx1.length = 1;
 			Tx1.status = TRANSFERING;
-			if(HAL_UART_Transmit_IT(&Uart1Handle, (uint8_t *)&Rx1.buffer[Rx1.length-1], Tx1.length) != HAL_OK)
+			if(HAL_UART_Transmit_IT(UartHandle, (uint8_t *)&Rx1.buffer[Rx1.length-1], 1) != HAL_OK)
+			{
+				// TODO recovery z teto chyby je nutne, muze se stat pri prijmu ceskych znaku
+				Error_Handler();
+			}
+
+			// nastav prijem dalsiho znaku
+			if(HAL_UART_Receive_IT(UartHandle, (uint8_t *)&Rx1.buffer[Rx1.length], 1) != HAL_OK)
 			{
 				Error_Handler();
 			}
@@ -190,17 +223,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 		else
 		{
 			// konec prenosu
-			// odesli konec radku za prichozim prikazem
-			Tx1.buffer[0] = '\r';
-			Tx1.buffer[1] = '\n';
-			Tx1.index = 0;
-			Tx1.length = 2;
-			Tx1.status = TRANSFERING;
-			if(HAL_UART_Transmit_IT(&Uart1Handle, (uint8_t *)&Tx1.buffer, Tx1.length) != HAL_OK)
-			{
-				Error_Handler();
-			}
 			Rx1.status = RECEIVEDONE;
+			Rx1.buffer[Rx1.length] = 0;
+			if(Scheduler_Add_Task(Cmd_decode_service, 0, CMD_DECODE_SERVICE_PERIOD) == SCH_MAX_TASKS)
+			{
+				// chyba pri zalozeni service
+			}
 		}
 	}
 }
@@ -232,3 +260,21 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle)
   /* Transfer error in reception/transmission process */
 }
 
+// nastav mod UART na prijem - pro HAL to znamena nastavit prijem na ocekavani 1 znaku
+void usart_set_receive_mode(void)
+{
+	Rx1.index = 0;
+	Rx1.length = 0;
+	Rx1.status = READYTORECEIVE;
+
+	// nastav prijem dalsiho znaku
+	if(HAL_UART_Receive_IT(&Uart1Handle, (uint8_t *)&Rx1.buffer[0], 1) != HAL_OK)
+	{
+		Error_Handler();
+	}
+}
+
+uint8_t *usart_get_rx_buffer(void)
+{
+	return (uint8_t *)&Rx1_buffer;
+}

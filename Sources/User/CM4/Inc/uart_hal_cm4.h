@@ -39,10 +39,10 @@ typedef struct {
 	USARTSTATUS status;
 } usart_data_rx_t;
 
-#define RX1BUFFERSIZE					128
-#define TX1BUFFERSIZE					128
+#define RX1BUFFERSIZE						128
+#define TX1BUFFERSIZE						128
 
-#define USARTUSB                        USART1
+#define USARTUSB                        	USART1
 #define USARTUSB_CLK_ENABLE()              __HAL_RCC_USART1_CLK_ENABLE()
 #define USARTUSB_RX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOA_CLK_ENABLE()
 #define USARTUSB_TX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOA_CLK_ENABLE()
@@ -70,11 +70,14 @@ extern UART_HandleTypeDef Uart1Handle;
 RETURN_STATUS uart_config(void);
 RETURN_STATUS uart_unconfig(void);
 RETURN_STATUS uart1_send_message(uint8_t *text, uint16_t len);
+RETURN_STATUS uart1_new_line(void);
 void usart_wait_until_sent(usart_data_tx_t *buffer);
 void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle);
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle);
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *UartHandle, uint16_t Size);
+void usart_set_receive_mode(void);
+uint8_t *usart_get_rx_buffer(void);
 
 #ifdef __cplusplus
 }
