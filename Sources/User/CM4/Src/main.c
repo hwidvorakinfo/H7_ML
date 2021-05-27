@@ -26,6 +26,8 @@
 #include "services.h"
 #include "mcuperipherals.h"
 #include "msg_types.h"
+#include "openamp.h"
+#include "dataacq.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -109,6 +111,16 @@ int main(void)
 	Scheduler_start();															// nyni je jiz mozne zakladat tasky
 	mcuperipherals_init();														// inicializace periferii MCU
 
+	if (dacq_init() != RETURN_OK)												// inicializace zaznamu dat
+	{
+		Error_Handler();
+	}
+
+	if (mikrobus_init() != RETURN_OK)											// inicializace mikrobus systemu
+	{
+		Error_Handler();
+	}
+
 	MAILBOX_Init();																// Inilitize the mailbox use notify the other core on new message
 	if (MX_OPENAMP_Init(RPMSG_REMOTE, NULL) != HAL_OK)							// Inilitize OpenAmp and libmetal libraries as RPMSG_REMOTE
 	{
@@ -116,7 +128,7 @@ int main(void)
 	}
 
 	/* create a endpoint for rmpsg communication */
-	status = OPENAMP_create_endpoint(&rp_endpoint, RPMSG_SERVICE_NAME, RPMSG_ADDR_ANY, rpmsg_recv_callback, NULL);
+	status = OPENAMP_create_endpoint((struct rpmsg_endpoint *)&rp_endpoint, RPMSG_SERVICE_NAME, RPMSG_ADDR_ANY, rpmsg_recv_callback, NULL);
 	if (status < 0)
 	{
 		Error_Handler();

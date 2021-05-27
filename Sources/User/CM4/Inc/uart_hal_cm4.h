@@ -15,6 +15,7 @@
 #include "stm32h7xx_hal.h"
 #include "defs.h"
 #include "main.h"
+#include "application.h"
 
 typedef enum {
 	READYTOSEND = 0,
@@ -62,10 +63,9 @@ typedef struct {
 #define USARTUSB_IRQn                      USART1_IRQn
 #define USARTUSB_IRQHandler                USART1_IRQHandler
 
-
-
-
 extern UART_HandleTypeDef Uart1Handle;
+extern volatile usart_data_tx_t Tx2;
+extern volatile usart_data_rx_t Rx2;
 
 RETURN_STATUS uart_config(void);
 RETURN_STATUS uart_unconfig(void);
@@ -76,7 +76,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *UartHandle);
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle);
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle);
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *UartHandle, uint16_t Size);
-void usart_set_receive_mode(void);
+void usart_set_receive_mode(UART_HandleTypeDef *UartHandle);
 uint8_t *usart_get_rx_buffer(void);
 
 #ifdef __cplusplus

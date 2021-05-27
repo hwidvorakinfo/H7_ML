@@ -41,16 +41,22 @@ COMMAND_STATUS cmd_reset(void *p_i);
 COMMAND_STATUS cmd_stime(void *p_i);
 COMMAND_STATUS cmd_column(void *p_i);
 COMMAND_STATUS cmd_colnum(void *p_i);
+COMMAND_STATUS cmd_time(void *p_i);
 COMMAND_STATUS cmd_start(void *p_i);
 COMMAND_STATUS cmd_stop(void *p_i);
+COMMAND_STATUS cmd_export(void *p_i);
+COMMAND_STATUS cmd_delall(void *p_i);
 
 // tela prikazu
 CMD_RETURN command_reset(void *p_i);
 CMD_RETURN command_stime(void *p_i);
 CMD_RETURN command_col(void *p_i);
 CMD_RETURN command_colnum(void *p_i);
+CMD_RETURN command_time(void *p_i);
 CMD_RETURN command_start(void *p_i);
 CMD_RETURN command_stop(void *p_i);
+CMD_RETURN command_csv(void *p_i);
+CMD_RETURN command_delall(void *p_i);
 
 #ifdef __cplusplus
 }

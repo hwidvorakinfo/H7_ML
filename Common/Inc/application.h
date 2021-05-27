@@ -16,46 +16,53 @@
 #ifdef UART_ENABLED
 
 #define UART1_ENABLED
-//#define UART2_ENABLED
+#define UART2_ENABLED
 
 // UART1
 #ifdef UART1_ENABLED
-
-#define UARTUSB_HANDLE		Uart1Handle
-
 #endif // UART1_ENABLED
 
 // UART2
 #ifdef UART2_ENABLED
-#define DEBUG_UART			USART2
-#define USART2_TX_CLOCKS	RCC_AHBPeriph_GPIOA
-#define USART2_TX_PORT		GPIOA
-#define USART2_TX_PIN		GPIO_Pin_2
-#define USART2_TX_SOURCE	GPIO_PinSource2
-#define USART2_TX_AF		GPIO_AF_1
-
-#define USART2_RX_CLOCKS	RCC_AHBPeriph_GPIOA
-#define USART2_RX_PORT		GPIOA
-#define USART2_RX_PIN		GPIO_Pin_3
-#define USART2_RX_SOURCE	GPIO_PinSource3
-#define USART2_RX_AF		GPIO_AF_1
-
-//#define USART2_DE_CLOCKS	RCC_AHBPeriph_GPIOA
-//#define USART2_DE_PORT	GPIOA
-//#define USART2_DE_PIN		GPIO_Pin_1
-//#define USART2_DE_SOURCE	GPIO_PinSource1
-//#define USART2_DE_AF		GPIO_AF_1
-
-// prototypy ovladacich funkci
-#define DEBUG_SEND_TEXT		usart2_send_text
-#define DEBUG_NEW_LINE		usart2_newline
-#define DEBUG_GET_DATA		get_usart2_Rx_buffer
-#define DEBUG_RELEASE_RX	usart2_release_Rx_buffer
-#define DEBUG_SET_UART_MODE	usart2_set_mode
-#define DEBUG_GET_UART_MODE	usart2_get_mode
 #endif // UART2_ENABLED
 
-#endif // UART_ENABLED
+ #endif // UART_ENABLED
+
+
+#define I2C_ENABLED
+#ifdef I2C_ENABLED
+
+//#define I2C1_ENABLED
+//#define I2C2_ENABLED
+//#define I2C3_ENABLED
+#define I2C4_ENABLED
+
+// I2C1
+#ifdef I2C1_ENABLED
+#endif // I2C1_ENABLED
+
+ // I2C2
+ #ifdef I2C2_ENABLED
+ #endif // I2C2_ENABLED
+
+ // I2C3
+ #ifdef I2C3_ENABLED
+ #endif // I2C3_ENABLED
+
+ // I2C4
+ #ifdef I2C4_ENABLED
+ #endif // I2C4_ENABLED
+
+#endif // I2C_ENABLED
+
+#define SPI_ENABLED
+#ifdef SPI_ENABLED
+#define SPI1_ENABLED
+
+#ifdef SPI1_ENABLED
+#endif // SPI1_ENABLED
+
+#endif // SPI_ENABLED
 
 // vstupy ADC
 #define ADC_INIT
@@ -65,6 +72,12 @@
 #define ADC_CLK_ENABLE()              __HAL_RCC_ADC12_CLK_ENABLE()
 #define ADC_CHANNEL_GPIO_CLK_ENABLE() __HAL_RCC_GPIOC_CLK_ENABLE()
 #define ADC_CHANNEL_PIN_CLK_ENABLE()  __HAL_RCC_GPIOC_CLK_ENABLE()
+
+#define TIM_ADC_SYNC				  TIM3
+#define TIM_ADC_SYNC_CLK_ENABLE()     __HAL_RCC_TIM3_CLK_ENABLE()
+#define TIM_ADC_SYNC_IRQn             TIM3_IRQn
+#define TIM_ADC_SYNC_IRQHandler       TIM3_IRQHandler
+#define TIM_ADC_SYNC_TRIGGER		  ADC_EXTERNALTRIG_T3_TRGO
 
 // port PAx
 

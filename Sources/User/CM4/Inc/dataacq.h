@@ -16,25 +16,40 @@
 #include "defs.h"
 #include "main.h"
 #include "application.h"
+#include "dataacq_types.h"
 
-#define MAX_NUM_OF_COLUMNS				10
+#define PROGRESSBARLENGTH						10
 
-typedef struct {
- 	uint16_t stime;
- 	uint8_t num_of_columns;
- 	uint32_t (*p_getfunc[MAX_NUM_OF_COLUMNS])(void);
- 	uint8_t taskid;
- } dataacq_setup_t;
-
- uint32_t vspfunc(uint16_t index, char *format, ...);
+uint32_t vspfunc(uint16_t index, char *format, ...);
 
 RETURN_STATUS dacq_init(void);
-RETURN_STATUS dacq_set_stime(uint16_t time);
+RETURN_STATUS dacq_set_freq(uint32_t freq);
+RETURN_STATUS dacq_set_time(uint32_t time);
 RETURN_STATUS daqc_set_colfunc(uint8_t index, void *p_func);
 RETURN_STATUS daqc_set_colnum(uint8_t num);
 RETURN_STATUS datacq_send_data(void);
+RETURN_STATUS dacq_csv(void);
 RETURN_STATUS dacq_start_acq(void);
 RETURN_STATUS dacq_stop_acq(void);
+RETURN_STATUS dacq_set_colquantity(uint8_t column, dataacq_quantity_t quantity);
+RETURN_STATUS dacq_set_colfile(uint8_t column, uint32_t file);
+RETURN_STATUS dacq_csv(void);
+RETURN_STATUS dacq_delall(void);
+
+
+
+uint32_t dacq_get_freq(void);
+uint32_t dacq_calculate_dma_size(void);
+RETURN_STATUS dacq_set_serial_setup(dataacq_quantity_t mode);
+dataacq_quantity_t dacq_get_serial_setup(void);
+RETURN_STATUS dacq_read_serial_channels(void);
+uint32_t dacq_adc_file_size(void);
+uint32_t dacq_serial_file_size(void);
+uint8_t dacq_number_of_adc_channels(void);
+uint8_t dacq_number_of_serial_channels(void);
+RETURN_STATUS dacq_cancel_progressbar(void);
+RETURN_STATUS dacq_increment_line_numbers(void);
+
 
 #ifdef __cplusplus
 }

@@ -172,6 +172,14 @@ int main(void)
   /* Configure the MPU attributes as Write Through for SDRAM*/
   MPU_Config();
 
+//  // test zapisu do SDRAM
+//  	volatile uint32_t *p_word = (uint32_t *)0xD0000000;
+//  	uint32_t i;
+//  	for (i = 0; i < 10; i++)
+//  	{
+//  		*p_word++ = i;
+//  	}
+
   if (HAL_Init() != HAL_OK)
   {
     Error_Handler();

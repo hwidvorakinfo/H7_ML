@@ -13,9 +13,12 @@
 #include "defs.h"
 #include "msg_types.h"
 #include "uart_hal_cm4.h"
+#include "adc_hal_cm4.h"
 #include "amp_messaging_cm4.h"
 #include "commands.h"
 #include "dataacq.h"
+#include "mikrobus.h"
+#include "beasth7.h"
 
 /* private prototypes */
 
@@ -78,7 +81,15 @@ void Cmd_decode_service(void)
 
 	commands_process();
 
-	usart_set_receive_mode();
+	usart_set_receive_mode((UART_HandleTypeDef *)&Uart1Handle);
+}
+
+// sluzba pro dekodovani prikazu z mikrobus
+void Mikrobus_uart_decode_service(void)
+{
+	//commands_process();
+
+	usart_set_receive_mode(&Uart2Handle);
 }
 
 // resetujici sluzba
@@ -90,5 +101,51 @@ void Reset_service(void)
 // sluzba pro vysilani dat
 void Datacq_service(void)
 {
-	datacq_send_data();
+	//datacq_send_data();
+
+	// ukonci sber adc kanalu
+	if (dacq_number_of_adc_channels() != 0)
+	{
+		adc_dma_unconfig();
+	}
+
+	// ukonci sber serial kanalu
+	dacq_set_serial_setup(SERIAL_ACQ_DISABLED);
+
+	// zastav synchronizacni casovac
+	adc_sync_timer_deinit();
+
+	// zrus sluzbu progress baru
+	dacq_cancel_progressbar();
+
+	const uint8_t text[] = "\r\nData logging finished\r\n";
+	uart1_send_message((uint8_t *)text, strlen((const char *)text));
+}
+
+// sluzba pro vypis progress baru
+void Progressbar_service(void)
+{
+	static uint8_t state = 0;
+	uint8_t text[] = "\r[          ]";
+	uint8_t i;
+#define POS			2
+
+	for (i = 0; i < PROGRESSBARLENGTH; i++)
+	{
+		if (i <= state)
+		{
+			text[POS+i] = '|';
+		}
+	}
+
+	uart1_send_message((uint8_t *)text, strlen((const char *)text));
+
+	state++;
+	if (state >= PROGRESSBARLENGTH)
+	{
+		state = 0;
+	}
+
+	HAL_GPIO_WritePin(LEDD_GPIO_PORT, LEDD_PIN, GPIO_PIN_RESET);		// zhasni LEDD
+#undef POS
 }

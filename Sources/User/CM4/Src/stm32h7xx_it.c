@@ -22,8 +22,11 @@
 #include "stm32h7xx_it.h"
 #include "beasth7.h"
 #include "scheduler.h"
+#include "application.h"
 #include "uart_hal_cm4.h"
 #include "adc_hal_cm4.h"
+#include "mikrobus.h"
+#include "dataacq.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -216,16 +219,79 @@ void USARTUSB_IRQHandler(void)
 }
 
 /**
+  * @brief  This function handles UART interrupt request.
+  * @param  None
+  * @retval None
+  * @Note   This function is redefined in "main.h" and related to DMA stream
+  *         used for USART data transmission
+  */
+void USARTMIKROE_IRQHandler(void)
+{
+  HAL_UART_IRQHandler(&Uart2Handle);
+}
+
+/**
+  * @brief  This function handles I2C event interrupt request.
+  * @param  None
+  * @retval None
+  * @Note   This function is redefined in "main.h" and related to I2C data transmission
+  */
+void I2CMIKROE_EV_IRQHandler(void)
+{
+  HAL_I2C_EV_IRQHandler(&I2c4Handle);
+}
+
+/**
+  * @brief  This function handles I2C error interrupt request.
+  * @param  None
+  * @retval None
+  * @Note   This function is redefined in "main.h" and related to I2C error
+  */
+void I2CMIKROE_ER_IRQHandler(void)
+{
+	HAL_I2C_ER_IRQHandler(&I2c4Handle);
+}
+
+/**
 * @brief  This function handles DMA1_Stream1_IRQHandler interrupt request.
 * @param  None
 * @retval None
 */
 void DMA1_Stream1_IRQHandler(void)
 {
-  HAL_DMA_IRQHandler(AdcHandle.DMA_Handle);
+	HAL_DMA_IRQHandler(AdcHandle.DMA_Handle);
 }
 
+/**
+  * @brief  This function handles TIM interrupt request.
+  * @param  None
+  * @retval None
+  */
+void TIM_ADC_SYNC_IRQHandler(void)
+{
+	HAL_TIM_IRQHandler(&TimHandle_adc_sync);
 
+	// obsluha vycitani seriovych dat
+	if (dacq_get_serial_setup() == (dataacq_quantity_t)SERIAL_ACQ_ENABLED)
+	{
+		dacq_read_serial_channels();
+	}
+
+	// zvys pocitadlo nabranych radku
+	dacq_increment_line_numbers();
+
+	HAL_GPIO_TogglePin(LEDD_GPIO_PORT, LEDD_PIN);
+}
+
+/**
+  * @brief  This function handles SPI interrupt request.
+  * @param  None
+  * @retval None
+  */
+void SPIMIKROE_IRQHandler(void)
+{
+  HAL_SPI_IRQHandler(&Spi1Handle);
+}
 /**
   * @}
   */

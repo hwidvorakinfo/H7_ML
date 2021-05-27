@@ -20,8 +20,8 @@ static command_t command_blank = {(uint8_t *)&COMMAND_BLANK, NULL, TRUE};			// p
 static const uint8_t COMMAND_REST[] = "RESET";
 static command_t cmd_rest = {(uint8_t *)&COMMAND_REST, &cmd_reset, TRUE};			// reset
 
-static const uint8_t COMMAND_STIME[] = "ST****";
-static command_t cmd_st = {(uint8_t *)&COMMAND_STIME, &cmd_stime, TRUE};			// sampling time
+static const uint8_t COMMAND_STIME[] = "F*****";
+static command_t cmd_st = {(uint8_t *)&COMMAND_STIME, &cmd_stime, TRUE};			// sampling freq from 1 to 32000 Hz
 
 static const uint8_t COMMAND_COL[] = "C*****";
 static command_t cmd_col = {(uint8_t *)&COMMAND_COL, &cmd_column, TRUE};			// prirad velicinu danemu sloupci
@@ -29,11 +29,22 @@ static command_t cmd_col = {(uint8_t *)&COMMAND_COL, &cmd_column, TRUE};			// pr
 static const uint8_t COMMAND_COLN[] = "CN*";
 static command_t cmd_coln = {(uint8_t *)&COMMAND_COLN, &cmd_colnum, TRUE};			// nastav pocet vypisovanych sloupcu
 
+static const uint8_t COMMAND_TIME[] = "T*****";
+static command_t cmd_tme = {(uint8_t *)&COMMAND_TIME, &cmd_time, TRUE};				// delka odberu v ms
+
 static const uint8_t COMMAND_START[] = "START";
 static command_t cmd_strt = {(uint8_t *)&COMMAND_START, &cmd_start, TRUE};			// zacatek mereni
 
 static const uint8_t COMMAND_STOP[] = "STOP";
-static command_t cmd_stp = {(uint8_t *)&COMMAND_STOP, &cmd_stop, TRUE};			// konec mereni
+static command_t cmd_stp = {(uint8_t *)&COMMAND_STOP, &cmd_stop, TRUE};				// konec mereni
+
+static const uint8_t COMMAND_CSV[] = "CSV";
+static command_t cmd_csv = {(uint8_t *)&COMMAND_CSV, &cmd_export, TRUE};			// export dat
+
+static const uint8_t COMMAND_DELALL[] = "DELALL";
+static command_t cmd_del = {(uint8_t *)&COMMAND_DELALL, &cmd_delall, TRUE};			// vymazani vseho
+
+
 
 
 COMMAND_STATUS commands_parse(uint8_t *pattern, uint8_t *command);
@@ -86,6 +97,17 @@ void commands_process(void)
 		}
 		return;
 	}
+	// parsing prikazu Time
+	else if (commands_parse((uint8_t *)&COMMAND_TIME, usart_get_rx_buffer()) == COMMANDOK)
+	{
+		if (cmd_tme.enabled)
+		{
+			// zavolani obsluzne funkce prikazu
+			p_func = cmd_tme.p_itemfunc;
+			p_func(usart_get_rx_buffer());
+		}
+		return;
+	}
 	// parsing prikazu Start
 	else if (commands_parse((uint8_t *)&COMMAND_START, usart_get_rx_buffer()) == COMMANDOK)
 	{
@@ -104,6 +126,28 @@ void commands_process(void)
 		{
 			// zavolani obsluzne funkce prikazu
 			p_func = cmd_stp.p_itemfunc;
+			p_func(usart_get_rx_buffer());
+		}
+		return;
+	}
+	// parsing prikazu CSV
+	else if (commands_parse((uint8_t *)&COMMAND_CSV, usart_get_rx_buffer()) == COMMANDOK)
+	{
+		if (cmd_csv.enabled)
+		{
+			// zavolani obsluzne funkce prikazu
+			p_func = cmd_csv.p_itemfunc;
+			p_func(usart_get_rx_buffer());
+		}
+		return;
+	}
+	// parsing prikazu DELALL
+	else if (commands_parse((uint8_t *)&COMMAND_DELALL, usart_get_rx_buffer()) == COMMANDOK)
+	{
+		if (cmd_del.enabled)
+		{
+			// zavolani obsluzne funkce prikazu
+			p_func = cmd_del.p_itemfunc;
 			p_func(usart_get_rx_buffer());
 		}
 		return;
@@ -261,15 +305,16 @@ CMD_RETURN command_stime(void *p_i)
 {
 	uint8_t *p_char = (uint8_t *)p_i;
 
-	// prikaz ma tvar "STxxxx", kde xxxx je cas v ms od 1 do 9999
+	// prikaz ma tvar "Fxxxxx", kde xxxx je frekvence  v Hz od 1 do 32000
 	uint8_t i;
 
-#define ST_0XXX		(2)
-#define ST_X0XX		(3)
-#define ST_XX0X		(4)
-#define ST_XXX0		(5)
+#define F_0XXXX		(1)
+#define F_X0XXX		(2)
+#define F_XX0XX		(3)
+#define F_XXX0X		(4)
+#define F_XXXX0		(5)
 
-	for (i = ST_0XXX; i <= ST_XXX0; i++)
+	for (i = F_0XXXX; i <= F_XXXX0; i++)
 	{
 		if (!cmd_isnumber(&p_char[i]))
 		{
@@ -278,24 +323,26 @@ CMD_RETURN command_stime(void *p_i)
 		}
 	}
 
-	uint16_t time;
-	time = 1000 * (p_char[ST_0XXX] - '0');
-	time += 100 * (p_char[ST_X0XX] - '0');
-	time += 10 * (p_char[ST_XX0X] - '0');
-	time += (p_char[ST_XXX0] - '0');
+	uint16_t freq;
+	freq = 10000 * (p_char[F_0XXXX] - '0');
+	freq += 1000 * (p_char[F_X0XXX] - '0');
+	freq += 100 *  (p_char[F_XX0XX] - '0');
+	freq += 10 *   (p_char[F_XXX0X] - '0');
+	freq +=        (p_char[F_XXXX0] - '0');
 
-	if (time == 0)
+	if (freq == 0)
 	{
-		time = 1;
+		freq = 1;
 	}
 
 	// uloz hodnotu do zaznamoveho systemu
-	dacq_set_stime(time);
+	dacq_set_freq(freq);
 
-#undef ST_0XXX
-#undef ST_X0XX
-#undef ST_XX0X
-#undef ST_XXX0
+#undef F_0XXXX
+#undef F_X0XXX
+#undef F_XX0XX
+#undef F_XXX0X
+#undef F_XXXX0
 
 	commands_ok_cmd();
 	return RETURN_OK;
@@ -354,21 +401,24 @@ CMD_RETURN command_col(void *p_i)
 	{
 		// operand je AIN1
 		daqc_set_colfunc(column, adc_get_ain1);
-
+		dacq_set_colquantity(column, (dataacq_quantity_t)AIN1);
 	}
 	else if (strcmp((const char *)operand, (const char *)ain2) == 0)
 	{
 		// operand je AIN2
 		daqc_set_colfunc(column, adc_get_ain2);
+		dacq_set_colquantity(column, (dataacq_quantity_t)AIN2);
 	}
 	else if (strcmp((const char *)operand, (const char *)ain3) == 0)
 	{
 		// operand je AIN3
 		daqc_set_colfunc(column, adc_get_ain3);
+		dacq_set_colquantity(column, (dataacq_quantity_t)AIN3);
 	}
 	else if (strcmp((const char *)operand, (const char *)accx) == 0)
 	{
 		// operand je ACCX
+
 	}
 	else if (strcmp((const char *)operand, (const char *)accy) == 0)
 	{
@@ -430,6 +480,64 @@ CMD_RETURN command_colnum(void *p_i)
 	return RETURN_OK;
 }
 
+// prikaz Sampling time
+COMMAND_STATUS cmd_time(void *p_i)
+{
+	if (command_time(p_i) == RETURN_ERROR)
+	{
+		return COMMANDWRONG;
+	}
+	return COMMANDOK;
+}
+
+CMD_RETURN command_time(void *p_i)
+{
+	uint8_t *p_char = (uint8_t *)p_i;
+
+	// prikaz ma tvar "Txxxxx", kde xxxxx je cas v ms od 1 do 99999
+	uint8_t i;
+
+#define T_0XXXX		(1)
+#define T_X0XXX		(2)
+#define T_XX0XX		(3)
+#define T_XXX0X		(4)
+#define T_XXXX0		(5)
+
+	for (i = T_0XXXX; i <= T_XXXX0; i++)
+	{
+		if (!cmd_isnumber(&p_char[i]))
+		{
+			commands_wrong_cmd();
+			return RETURN_ERROR;
+		}
+	}
+
+	uint16_t time;
+	time = 10000 * (p_char[T_0XXXX] - '0');
+	time += 1000 * (p_char[T_X0XXX] - '0');
+	time += 100 *  (p_char[T_XX0XX] - '0');
+	time += 10 *   (p_char[T_XXX0X] - '0');
+	time +=        (p_char[T_XXXX0] - '0');
+
+	if (time == 0)
+	{
+		time = 1;
+	}
+
+	// uloz hodnotu do zaznamoveho systemu
+	dacq_set_time(time);
+
+#undef T_0XXXX
+#undef T_X0XXX
+#undef T_XX0XX
+#undef T_XXX0X
+#undef T_XXXX0
+
+	commands_ok_cmd();
+	return RETURN_OK;
+}
+
+
 // prikaz Start
 COMMAND_STATUS cmd_start(void *p_i)
 {
@@ -452,9 +560,6 @@ CMD_RETURN command_start(void *p_i)
 		commands_wrong_cmd();
 		return RETURN_ERROR;
 	}
-
-
-
 }
 
 // prikaz Stop
@@ -479,8 +584,53 @@ CMD_RETURN command_stop(void *p_i)
 		commands_wrong_cmd();
 		return RETURN_ERROR;
 	}
+}
 
+// prikaz CSV
+COMMAND_STATUS cmd_export(void *p_i)
+{
+	if (command_csv(p_i) == RETURN_ERROR)
+	{
+		return COMMANDWRONG;
+	}
+	return COMMANDOK;
+}
 
+CMD_RETURN command_csv(void *p_i)
+{
+	if (dacq_csv() == RETURN_OK)
+	{
+		//commands_ok_cmd();
+		return RETURN_OK;
+	}
+	else
+	{
+		commands_wrong_cmd();
+		return RETURN_ERROR;
+	}
+}
 
+// prikaz DELALL
+COMMAND_STATUS cmd_delall(void *p_i)
+{
+	if (command_delall(p_i) == RETURN_ERROR)
+	{
+		return COMMANDWRONG;
+	}
+	return COMMANDOK;
+}
+
+CMD_RETURN command_delall(void *p_i)
+{
+	if (dacq_delall() == RETURN_OK)
+	{
+		commands_ok_cmd();
+		return RETURN_OK;
+	}
+	else
+	{
+		commands_wrong_cmd();
+		return RETURN_ERROR;
+	}
 }
 
