@@ -11,6 +11,7 @@
 #include "error_handler.h"
 #include "mikrobus.h"
 #include "i2c_timing_utility.h"
+#include "mpu-9250.h"
 
 UART_HandleTypeDef Uart2Handle;
 volatile usart_data_tx_t Tx2;
@@ -26,6 +27,11 @@ static volatile uint8_t spitx_buffer[SPIBUFFERSIZE];
 static volatile uint8_t spirx_buffer[SPIBUFFERSIZE];
 __IO uint32_t wTransferState = TRANSFER_WAIT;
 
+EXTI_HandleTypeDef int_exti;
+
+static TIM_HandleTypeDef TimHandle;
+static TIM_OC_InitTypeDef sConfig = {0};
+static uint16_t pwm_value = 0;
 
 const uint8_t mikrobus_message[] = "\n\rmikrobus\r\n";
 
@@ -51,6 +57,25 @@ RETURN_STATUS mikrobus_init(void)
 		Error_Handler();
 	}
 #endif // SPI1_ENABLED
+
+	// RST vystup
+	mikrobus_reset_config();
+
+	// INT vstup
+	mikrobus_int_config();
+
+	// PWM vystup
+	if (mikrobus_pwm_config() != RETURN_OK)
+	{
+		Error_Handler();
+	}
+
+#ifdef MPU9250ENABLED
+	if (mpu_init() != RETURN_OK)
+	{
+		Error_Handler();
+	}
+#endif // MPU9250ENABLED
 
 	return RETURN_OK;
 }
@@ -464,14 +489,14 @@ RETURN_STATUS mikrobus_spi_config(void)
 		Error_Handler();
 	}
 
-	spitx_buffer[0] = 0x45;
-	spitx_buffer[1] = 0x23;
-	uint8_t i;
-
-	for (i = 0; i < 10; i++)
-	{
-		mikrobus_spi_transmitreceive((uint8_t *)spitx_buffer, (uint8_t *)spitx_buffer, 2);
-	}
+//	spitx_buffer[0] = 0x45;
+//	spitx_buffer[1] = 0x23;
+//	uint8_t i;
+//
+//	for (i = 0; i < 10; i++)
+//	{
+//		mikrobus_spi_transmitreceive((uint8_t *)spitx_buffer, (uint8_t *)spitx_buffer, 2);
+//	}
 
 	return RETURN_OK;
 }
@@ -564,4 +589,197 @@ void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi)
 
 #endif // SPI1_ENABLED
 
+RETURN_STATUS mikrobus_reset_config(void)
+{
+	GPIO_InitTypeDef  GPIO_InitStruct;
+
+	MIKROE_RESET_GPIO_CLK_ENABLE();
+
+	GPIO_InitStruct.Pin       = MIKROE_RESET_PIN;
+	GPIO_InitStruct.Mode      = GPIO_MODE_OUTPUT_PP;
+	GPIO_InitStruct.Pull      = GPIO_PULLDOWN;
+	GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_HIGH;
+	HAL_GPIO_Init(MIKROE_RESET_GPIO_PORT, &GPIO_InitStruct);
+
+	mikrobus_reset_high();
+
+	return RETURN_OK;
+}
+
+RETURN_STATUS mikrobus_reset_low(void)
+{
+	HAL_GPIO_WritePin(MIKROE_RESET_GPIO_PORT, MIKROE_RESET_PIN, GPIO_PIN_RESET);	// nastav RESET na LOW
+
+	return RETURN_OK;
+}
+
+RETURN_STATUS mikrobus_reset_high(void)
+{
+	HAL_GPIO_WritePin(MIKROE_RESET_GPIO_PORT, MIKROE_RESET_PIN, GPIO_PIN_SET);		// nastav RESET na HIGH
+
+	return RETURN_OK;
+}
+
+RETURN_STATUS mikrobus_int_config(void)
+{
+	GPIO_InitTypeDef  GPIO_InitStruct;
+
+	MIKROE_INT_GPIO_CLK_ENABLE();
+
+	GPIO_InitStruct.Pin       = MIKROE_INT_PIN;
+	GPIO_InitStruct.Mode      = MIKROE_INT_SLOPE;
+	GPIO_InitStruct.Pull      = GPIO_NOPULL;
+	GPIO_InitStruct.Speed     = GPIO_SPEED_FREQ_HIGH;
+	HAL_GPIO_Init(MIKROE_RESET_GPIO_PORT, &GPIO_InitStruct);
+
+	HAL_EXTI_GetHandle(&int_exti, MIKROE_INT_EXTILINE);
+	HAL_EXTI_RegisterCallback(&int_exti, HAL_EXTI_COMMON_CB_ID, mikrobus_int_cb);
+
+	/* Enable and set Button EXTI Interrupt to the lowest priority */
+	HAL_NVIC_SetPriority(EXTI0_IRQn, 0xFF, 0x00);
+	HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+	return RETURN_OK;
+}
+
+void mikrobus_int_handler(void)
+{
+	HAL_EXTI_IRQHandler(&int_exti);
+}
+
+void mikrobus_int_cb(void)
+{
+	// obsluha preruseni od mikrobusu
+}
+
+RETURN_STATUS mikrobus_pwm_config(void)
+{
+	GPIO_InitTypeDef   GPIO_InitStruct;
+	/*##-1- Enable peripherals and GPIO Clocks #################################*/
+
+	/* TIM clock enable */
+	TIMPWMMIKROE_CLK_ENABLE();
+
+	/* Enable all GPIO Channels Clock requested */
+	TIMPWMMIKROE_CHANNEL_GPIO_PORT();
+
+	/* Common configuration for channel 2 */
+	GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
+	GPIO_InitStruct.Pull = GPIO_PULLUP;
+	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+
+	GPIO_InitStruct.Alternate = TIMPWMMIKROE_GPIO_AF_CHANNEL2;
+	GPIO_InitStruct.Pin = TIMPWMMIKROE_GPIO_PIN_CHANNEL2;
+	HAL_GPIO_Init(TIMPWMMIKROE_GPIO_PORT_CHANNEL2, &GPIO_InitStruct);
+
+	uint32_t uhPrescalerValue = 0;
+	uhPrescalerValue = (uint32_t)(SystemCoreClock / 20000000) - 1;
+
+	/*##-1- Configure the TIM peripheral #######################################*/
+	/* -----------------------------------------------------------------------
+	TIM1 Configuration: generate 4 PWM signals with 4 different duty cycles.
+
+	In this example TIM1 input clock (TIM1CLK) is set to APB2 clock (PCLK2),
+	since APB2 prescaler is equal to 2.
+	  TIM1CLK = 2*PCLK2
+	  PCLK2 = HCLK/2 as AHB Clock divider is set to RCC_HCLK_DIV2
+	  => TIM1CLK = HCLK = SystemCoreClock
+
+	To get TIM1 counter clock at 20 MHz, the prescaler is computed as follows:
+	   Prescaler = (TIM1CLK / TIM1 counter clock) - 1
+	   Prescaler = ((SystemCoreClock) /(20 MHz)) - 1
+
+	To get TIM1 output clock at 20 KHz, the period (ARR)) is computed as follows:
+	   ARR = (TIM1 counter clock / TIM1 output clock) - 1
+		   = 999
+
+	TIM1 Channel1 duty cycle = (TIM1_CCR1/ TIM1_ARR + 1)* 100 = 50%
+	TIM1 Channel2 duty cycle = (TIM1_CCR2/ TIM1_ARR + 1)* 100 = 37.5%
+	TIM1 Channel3 duty cycle = (TIM1_CCR3/ TIM1_ARR + 1)* 100 = 25%
+	TIM1 Channel4 duty cycle = (TIM1_CCR4/ TIM1_ARR + 1)* 100 = 12.5%
+
+	Note:
+	 SystemCoreClock variable holds HCLK frequency and is defined in system_stm32h7xx.c file.
+	 Each time the core clock (HCLK) changes, user had to update SystemCoreClock
+	 variable value. Otherwise, any configuration based on this variable will be incorrect.
+	 This variable is updated in three ways:
+	  1) by calling CMSIS function SystemCoreClockUpdate()
+	  2) by calling HAL API function HAL_RCC_GetSysClockFreq()
+	  3) each time HAL_RCC_ClockConfig() is called to configure the system clock frequency
+	----------------------------------------------------------------------- */
+
+	/* Initialize TIMx peripheral as follows:
+	   + Prescaler = (SystemCoreClock / 20000000) - 1
+	   + Period = (1000 - 1)
+	   + ClockDivision = 0
+	   + Counter direction = Up
+	*/
+	TimHandle.Instance = TIMPWMMIKROE;
+	TimHandle.Init.Prescaler         = uhPrescalerValue;
+	TimHandle.Init.Period            = MIKROEPWMPERIOD_VALUE;
+	TimHandle.Init.ClockDivision     = 0;
+	TimHandle.Init.CounterMode       = TIM_COUNTERMODE_UP;
+	TimHandle.Init.RepetitionCounter = 0;
+	if (HAL_TIM_PWM_Init(&TimHandle) != HAL_OK)
+	{
+		/* Initialization Error */
+		Error_Handler();
+	}
+
+	/*##-2- Configure the PWM channels #########################################*/
+	/* Common configuration for all channels */
+	sConfig.OCMode       = TIM_OCMODE_PWM1;
+	sConfig.OCPolarity   = TIM_OCPOLARITY_HIGH;
+	sConfig.OCIdleState  = TIM_OCIDLESTATE_RESET;
+	sConfig.OCFastMode   = TIM_OCFAST_DISABLE;
+	sConfig.OCNPolarity  = TIM_OCNPOLARITY_HIGH;
+	sConfig.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+
+
+	/* Set the pulse value for channel 2 */
+	sConfig.Pulse = pwm_value;
+	if (HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfig, TIM_CHANNEL_2) != HAL_OK)
+	{
+		/* Configuration Error */
+		Error_Handler();
+	}
+
+	/*##-3- Start PWM signals generation #######################################*/
+	/* Start channel 2 */
+	if (HAL_TIMEx_PWMN_Start(&TimHandle, TIM_CHANNEL_2) != HAL_OK)
+	{
+		/* PWM Generation Error */
+		Error_Handler();
+	}
+
+
+
+	return RETURN_OK;
+}
+
+RETURN_STATUS mikrobus_pwm_set_duty(uint16_t duty)
+{
+	if (HAL_TIMEx_PWMN_Stop(&TimHandle, TIM_CHANNEL_2) != HAL_OK)
+	{
+		/* PWM Generation Error */
+		Error_Handler();
+	}
+
+	/* Set the pulse value for channel 2 */
+	sConfig.Pulse = duty;
+	pwm_value = duty;
+	if (HAL_TIM_PWM_ConfigChannel(&TimHandle, &sConfig, TIM_CHANNEL_2) != HAL_OK)
+	{
+		/* Configuration Error */
+		Error_Handler();
+	}
+
+	if (HAL_TIMEx_PWMN_Start(&TimHandle, TIM_CHANNEL_2) != HAL_OK)
+	{
+		/* PWM Generation Error */
+		Error_Handler();
+	}
+
+	return RETURN_OK;
+}
 

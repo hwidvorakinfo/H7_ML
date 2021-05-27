@@ -48,6 +48,7 @@ void USARTUSB_IRQHandler(void);
 void USARTMIKROE_IRQHandler(void);
 void TIM_ADC_SYNC_IRQHandler(void);
 void SPIMIKROE_IRQHandler(void);
+void EXTI1_IRQHandler(void);
 
 #ifdef __cplusplus
 }

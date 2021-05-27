@@ -136,6 +136,41 @@ RETURN_STATUS mikrobus_spi_transmitreceive(uint8_t *tx_buffer, uint8_t *rx_buffe
 void HAL_SPI_TxRxCpltCallback(SPI_HandleTypeDef *hspi);
 void HAL_SPI_ErrorCallback(SPI_HandleTypeDef *hspi);
 
+// Reset
+#define MIKROE_RESET_GPIO_CLK_ENABLE()     __HAL_RCC_GPIOA_CLK_ENABLE()
+#define MIKROE_RESET_PIN                   GPIO_PIN_0
+#define MIKROE_RESET_GPIO_PORT             GPIOA
+
+RETURN_STATUS mikrobus_reset_config(void);
+RETURN_STATUS mikrobus_reset_low(void);
+RETURN_STATUS mikrobus_reset_high(void);
+
+#define MIKROE_INT_GPIO_CLK_ENABLE()     	__HAL_RCC_GPIOA_CLK_ENABLE()
+#define MIKROE_INT_PIN                   	GPIO_PIN_1
+#define MIKROE_INT_GPIO_PORT             	GPIOA
+#define MIKROE_INT_EXTILINE				 	EXTI_LINE_1
+#define MIKROE_INT_SLOPE					GPIO_MODE_IT_FALLING
+
+RETURN_STATUS mikrobus_int_config(void);
+void mikrobus_int_handler(void);
+void mikrobus_int_cb(void);
+
+// PWM
+/* Definition for TIMx clock resources */
+#define TIMPWMMIKROE                        TIM8
+#define TIMPWMMIKROE_CLK_ENABLE()           __HAL_RCC_TIM8_CLK_ENABLE()
+
+/* Definition for TIMx Channel Pins */
+#define TIMPWMMIKROE_CHANNEL_GPIO_PORT()    __HAL_RCC_GPIOB_CLK_ENABLE();
+#define TIMPWMMIKROE_GPIO_PORT_CHANNEL2     GPIOB
+#define TIMPWMMIKROE_GPIO_PIN_CHANNEL2      GPIO_PIN_0
+#define TIMPWMMIKROE_GPIO_AF_CHANNEL2       GPIO_AF3_TIM8
+
+#define MIKROEPWMPERIOD_VALUE       		(uint32_t)(1000 - 1)    /* Period Value  */
+
+RETURN_STATUS mikrobus_pwm_config(void);
+RETURN_STATUS mikrobus_pwm_set_duty(uint16_t duty);
+
 #ifdef __cplusplus
 }
 #endif

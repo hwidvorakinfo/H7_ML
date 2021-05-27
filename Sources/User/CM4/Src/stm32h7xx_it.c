@@ -292,6 +292,17 @@ void SPIMIKROE_IRQHandler(void)
 {
   HAL_SPI_IRQHandler(&Spi1Handle);
 }
+
+/**
+  * @brief  This function handles external lines 1 interrupt request.
+  * @param  None
+  * @retval None
+  */
+void EXTI1_IRQHandler(void)
+{
+	mikrobus_int_handler();
+}
+
 /**
   * @}
   */
