@@ -118,8 +118,8 @@ void Datacq_service(void)
 	// zrus sluzbu progress baru
 	dacq_cancel_progressbar();
 
-	const uint8_t text[] = "\r\nData logging finished\r\n";
-	uart1_send_message((uint8_t *)text, strlen((const char *)text));
+	// vypis zaverecnou zpravu
+	dacq_logging_finished_message();
 
 	// zhasni LEDD
 	HAL_GPIO_WritePin(LEDD_GPIO_PORT, LEDD_PIN, GPIO_PIN_SET);

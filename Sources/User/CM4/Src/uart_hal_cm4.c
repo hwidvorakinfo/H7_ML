@@ -87,6 +87,7 @@ RETURN_STATUS uart_config(void)
 	Rx1.buffer = (uint8_t *)&Rx1_buffer;
 	Rx1.index = 0;
 	Rx1.status = READYTORECEIVE;
+	Rx1.escape = FALSE;
 
 	uart1_send_message((uint8_t *)hello_message, strlen((const char *)hello_message));
 
@@ -210,14 +211,30 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 		{
 			Rx1.length++;
 
-			// posli prijaty znak jako echo
-			Tx1.index = 0;
-			Tx1.length = 1;
-			Tx1.status = TRANSFERING;
-			if(HAL_UART_Transmit_IT(&Uart1Handle, (uint8_t *)&Rx1.buffer[Rx1.length-1], 1) != HAL_OK)
+			// posli prijaty znak jako echo, pokud jde o text
+			volatile uint8_t reply = Rx1.buffer[Rx1.length-1];
+			if ((reply >= ' ') && (reply <= '~'))
 			{
-				// TODO recovery z teto chyby je nutne, muze se stat pri prijmu ceskych znaku
-				Error_Handler();
+				if (Rx1.escape != TRUE)
+				{
+					Tx1.index = 0;
+					Tx1.length = 1;
+					Tx1.status = TRANSFERING;
+					if(HAL_UART_Transmit_IT(&Uart1Handle, (uint8_t *)&reply, 1) != HAL_OK)
+					{
+						// TODO recovery z teto chyby je nutne, muze se stat pri prijmu ceskych znaku
+						Error_Handler();
+					}
+				}
+				else
+				{
+					Rx1.escape = FALSE;
+				}
+			}
+			else if (reply == 0x1B)
+			{
+				// escape znak - priste nic nevypisuj
+				Rx1.escape = TRUE;
 			}
 
 			// nastav prijem dalsiho znaku

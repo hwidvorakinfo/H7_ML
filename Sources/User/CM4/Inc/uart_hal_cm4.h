@@ -38,6 +38,7 @@ typedef struct {
 	uint8_t *buffer;
 	uint16_t index;
 	USARTSTATUS status;
+	uint8_t escape;
 } usart_data_rx_t;
 
 #define RX1BUFFERSIZE						128

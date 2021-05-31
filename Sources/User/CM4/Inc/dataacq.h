@@ -50,6 +50,7 @@ uint8_t dacq_number_of_serial_channels(void);
 RETURN_STATUS dacq_cancel_progressbar(void);
 RETURN_STATUS dacq_increment_line_numbers(void);
 RETURN_STATUS dacq_read_serial_channels(void);
+RETURN_STATUS dacq_logging_finished_message(void);
 
 
 #ifdef __cplusplus

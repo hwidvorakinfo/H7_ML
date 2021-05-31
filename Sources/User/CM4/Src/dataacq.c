@@ -703,3 +703,17 @@ RETURN_STATUS dacq_delall(void)
 	return RETURN_OK;
 }
 
+RETURN_STATUS dacq_logging_finished_message(void)
+{
+	// vypis zpravu
+	const uint8_t text[] = "\r\nData logging finished, ";
+	uart1_send_message((uint8_t *)text, strlen((const char *)text));
+
+	// vypis pocet nabranych radku
+	vspfunc(0, "%d", linenumbers);
+	vspfunc(0, "%s lines logged\r\n", buffer);
+	uart1_send_message((uint8_t *)buffer, strlen((const char *)buffer));
+
+	return RETURN_OK;
+}
+
