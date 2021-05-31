@@ -12,6 +12,7 @@
 #include "mikrobus.h"
 #include "i2c_timing_utility.h"
 #include "mpu-9250.h"
+#include "dataacq.h"
 
 UART_HandleTypeDef Uart2Handle;
 volatile usart_data_tx_t Tx2;

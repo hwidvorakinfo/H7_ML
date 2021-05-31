@@ -28,6 +28,7 @@
 #include "msg_types.h"
 #include "openamp.h"
 #include "dataacq.h"
+#include "mikrobus.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{

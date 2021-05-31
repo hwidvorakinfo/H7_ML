@@ -130,6 +130,8 @@ enum {
 
 extern SPI_HandleTypeDef Spi1Handle;
 
+RETURN_STATUS mikrobus_init(void);
+
 RETURN_STATUS mikrobus_spi_config(void);
 RETURN_STATUS mikrobus_spi_unconfig(void);
 RETURN_STATUS mikrobus_spi_transmitreceive(uint8_t *tx_buffer, uint8_t *rx_buffer, uint32_t size);

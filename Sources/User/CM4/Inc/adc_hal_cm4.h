@@ -36,7 +36,7 @@ extern TIM_HandleTypeDef TimHandle_adc_sync;
 
 void HAL_ADC_MspInit(ADC_HandleTypeDef *hadc);
 RETURN_STATUS adc_dma_config(uint32_t file_address);
-RETURN_STATUS adc_dma_start(void);
+RETURN_STATUS adc_sync_start(void);
 RETURN_STATUS adc_dma_unconfig(void);
 RETURN_STATUS adc_sync_timer_init(uint32_t freq);
 RETURN_STATUS adc_sync_timer_deinit(void);

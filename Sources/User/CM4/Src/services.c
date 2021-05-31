@@ -120,6 +120,9 @@ void Datacq_service(void)
 
 	const uint8_t text[] = "\r\nData logging finished\r\n";
 	uart1_send_message((uint8_t *)text, strlen((const char *)text));
+
+	// zhasni LEDD
+	HAL_GPIO_WritePin(LEDD_GPIO_PORT, LEDD_PIN, GPIO_PIN_SET);
 }
 
 // sluzba pro vypis progress baru
@@ -145,7 +148,5 @@ void Progressbar_service(void)
 	{
 		state = 0;
 	}
-
-	HAL_GPIO_WritePin(LEDD_GPIO_PORT, LEDD_PIN, GPIO_PIN_RESET);		// zhasni LEDD
 #undef POS
 }

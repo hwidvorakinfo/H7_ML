@@ -170,7 +170,7 @@ RETURN_STATUS adc_dma_config(uint32_t file_address)
 	return RETURN_OK;
 }
 
-RETURN_STATUS adc_dma_start(void)
+RETURN_STATUS adc_sync_start(void)
 {
 	// nastaveni startovaciho casovace
 	adc_sync_timer_init(dacq_get_freq());

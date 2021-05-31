@@ -14,6 +14,7 @@
 
 uint32_t sdramfs_find_max_id(void);
 
+
 // inicializuj misto pro vsechny soubory na prazdne zaznamy - vymaz celou alokacni tabulku
 RETURN_STATUS sdramfs_init(void)
 {
@@ -25,6 +26,20 @@ RETURN_STATUS sdramfs_init(void)
 	{
 		return RETURN_ERROR;
 	}
+
+//	volatile uint16_t *p_word = (uint16_t *)SDRAMFS_FILE_AREA_START;
+//	volatile uint32_t *p_double;
+//	volatile uint8_t i;
+//	for (i = 0; i < 5; i++)
+//	{
+//		*p_word++ = i;
+//	}
+//	p_double = (uint32_t *)p_word;
+//	for (i = 0; i < 5; i++)
+//	{
+//		*p_double++ = i;
+//	}
+//	return RETURN_OK;
 }
 
 uint32_t sdramfs_find_max_id(void)

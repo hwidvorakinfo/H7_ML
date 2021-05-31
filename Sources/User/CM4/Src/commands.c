@@ -396,38 +396,71 @@ CMD_RETURN command_col(void *p_i)
 	const uint8_t accx[] = "ACCX";
 	const uint8_t accy[] = "ACCY";
 	const uint8_t accz[] = "ACCZ";
+	const uint8_t gyrox[] = "GYROX";
+	const uint8_t gyroy[] = "GYROY";
+	const uint8_t gyroz[] = "GYROZ";
+	const uint8_t temp[] = "TEMP";
 
 	if (strcmp((const char *)operand, (const char *)ain1) == 0)
 	{
 		// operand je AIN1
-		daqc_set_colfunc(column, adc_get_ain1);
+		daqc_set_colfunc(column, NULL);
 		dacq_set_colquantity(column, (dataacq_quantity_t)AIN1);
 	}
 	else if (strcmp((const char *)operand, (const char *)ain2) == 0)
 	{
 		// operand je AIN2
-		daqc_set_colfunc(column, adc_get_ain2);
+		daqc_set_colfunc(column, NULL);
 		dacq_set_colquantity(column, (dataacq_quantity_t)AIN2);
 	}
 	else if (strcmp((const char *)operand, (const char *)ain3) == 0)
 	{
 		// operand je AIN3
-		daqc_set_colfunc(column, adc_get_ain3);
+		daqc_set_colfunc(column, NULL);
 		dacq_set_colquantity(column, (dataacq_quantity_t)AIN3);
 	}
 	else if (strcmp((const char *)operand, (const char *)accx) == 0)
 	{
 		// operand je ACCX
-
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)ACCX);
 	}
 	else if (strcmp((const char *)operand, (const char *)accy) == 0)
 	{
 		// operand je ACCY
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)ACCY);
 	}
 	else if (strcmp((const char *)operand, (const char *)accz) == 0)
 	{
 		// operand je ACCZ
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)ACCZ);
 	}
+	else if (strcmp((const char *)operand, (const char *)gyrox) == 0)
+	{
+		// operand je GYROX
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)GYROX);
+	}
+	else if (strcmp((const char *)operand, (const char *)gyroy) == 0)
+	{
+		// operand je GYROY
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)GYROY);
+	}
+	else if (strcmp((const char *)operand, (const char *)gyroz) == 0)
+	{
+		// operand je GYROZ
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)GYROZ);
+	}
+	else if (strcmp((const char *)operand, (const char *)temp) == 0)
+	{
+		// operand je TEMP
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)TEMP);
+		}
 	else
 	{
 		// neplatna kombinace
@@ -601,6 +634,7 @@ CMD_RETURN command_csv(void *p_i)
 	if (dacq_csv() == RETURN_OK)
 	{
 		//commands_ok_cmd();
+		uart1_new_line();
 		return RETURN_OK;
 	}
 	else

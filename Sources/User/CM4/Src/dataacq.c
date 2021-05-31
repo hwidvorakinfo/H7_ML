@@ -15,12 +15,14 @@
 #include "uart_hal_cm4.h"
 #include "adc_hal_cm4.h"
 #include "sdramfs.h"
+#include "mpu-9250.h"
 
 static volatile dataacq_setup_t datacq;
 static volatile uint8_t buffer[TX1BUFFERSIZE];
 static volatile uint16_t buffer_index;
 static uint8_t progressbar_id;
 static uint32_t linenumbers = 0;
+static uint8_t *datacq_serial_data = NULL;
 
 RETURN_STATUS dacq_add_id_to_adc_columns(uint32_t id);
 RETURN_STATUS dacq_add_id_to_serial_columns(uint32_t id);
@@ -113,12 +115,6 @@ RETURN_STATUS dacq_start_acq(void)
 		{
 			Error_Handler();
 		}
-
-		// odstartuj ADC sber
-		if (adc_dma_start() != RETURN_OK)
-		{
-			Error_Handler();
-		}
 	}
 
 	// nastav zaznam pro seriova data
@@ -131,6 +127,7 @@ RETURN_STATUS dacq_start_acq(void)
 		// v serial_record je nyni id souboru a adresa, kde soubor zacina
 		dacq_add_id_to_serial_columns(serial_record.id);
 		// serial_record.address je adresa zacatku ukladani ADC dat
+		datacq_serial_data = (uint8_t *)serial_record.address;
 
 		// edituj zaznam souboru pro serial data
 		if (sdramfs_edit_file_header((dataacq_setup_t *)&datacq, serial_record.id) != RETURN_OK)
@@ -140,6 +137,15 @@ RETURN_STATUS dacq_start_acq(void)
 
 		// odstartuj serial sber
 		dacq_enable_serial(serial_record.address);
+	}
+	// pokud je pozadavek na sber nejakeho kanalu, odstartuj synchronizacni casovac
+	if ((dacq_number_of_adc_channels() != 0) || (dacq_number_of_serial_channels() != 0))
+	{
+		// odstartuj synchronizacni casovac
+		if (adc_sync_start() != RETURN_OK)
+		{
+			Error_Handler();
+		}
 	}
 
 	// zaloz novou sluzbu pro ukonceni zaznamu
@@ -305,7 +311,7 @@ RETURN_STATUS dacq_csv(void)
 	uint32_t lines = linenumbers;
 	volatile uint8_t column;
 	volatile uint8_t part;
-	volatile int16_t number;
+	volatile int32_t number;
 	uint8_t text[] = "         ";
 
 	// vytvor hlavicku zaznamu
@@ -342,7 +348,7 @@ RETURN_STATUS dacq_csv(void)
 			break;
 
 			case ACCZ:
-				memcpy(&text, (const char *)"ACCY", strlen("ACCZ"));
+				memcpy(&text, (const char *)"ACCZ", strlen("ACCZ"));
 				text[strlen("ACCZ")] = 0;
 			break;
 
@@ -397,17 +403,37 @@ RETURN_STATUS dacq_csv(void)
 				break;
 
 				case ACCX:
-					number = *p_serials;
+					number = (int16_t)*p_serials;
 					p_serials++;
 				break;
 
 				case ACCY:
-					number = *p_serials;
+					number = (int16_t)*p_serials;
 					p_serials++;
 				break;
 
 				case ACCZ:
-					number = *p_serials;
+					number = (int16_t)*p_serials;
+					p_serials++;
+				break;
+
+				case GYROX:
+					number = (int16_t)*p_serials;
+					p_serials++;
+				break;
+
+				case GYROY:
+					number = (int16_t)*p_serials;
+					p_serials++;
+				break;
+
+				case GYROZ:
+					number = (int16_t)*p_serials;
+					p_serials++;
+				break;
+
+				case TEMP:
+					number = (int16_t)*p_serials;
 					p_serials++;
 				break;
 
@@ -493,7 +519,9 @@ uint32_t dacq_calculate_dma_size(void)
 	uint32_t size;
 
 	// spocitej pro pocet vsech ADC kanalu
-	size = sizeof(uint16_t) * datacq.freq * (datacq.period/1000 + 1); // kazda zapocata cast sekundy se zapocitana jako cela sekunda - efektivni ale rychle
+	size = sizeof(uint16_t) * datacq.freq * (datacq.period/1000 + 1 + 2);
+	// kazda zapocata cast sekundy se zapocitana jako cela sekunda - efektivni ale rychle
+	// dale +2 pro udalost ihned po odstartovani casovace a po skonceni, kdy casovac jeste dojede
 
 	return size;
 }
@@ -585,6 +613,64 @@ dataacq_quantity_t dacq_get_serial_setup(void)
 
 RETURN_STATUS dacq_read_serial_channels(void)
 {
+	// zde probiha cteni dat ze seriovych kanalu
+	// napr. z mpu-9250.c jsou ziskana data pomoci uint8_t *mpu_get_data_buffer(void)
+	if (mpu_read_accgyro() == RETURN_OK)
+	{
+		accgyro_data_t *p_values = (accgyro_data_t *)mpu_get_data();
+		if (datacq_serial_data != NULL)
+		{
+			// proved vyber dle pozadovanych velicin
+			// projdi pres vsechny sloupce
+			uint8_t column;
+			uint8_t offset = 0;
+			for (column = 0; column < datacq.num_of_columns; column++)
+			{
+				switch(datacq.quantity_in_column[column])
+				{
+					case ACCX:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->accx;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case ACCY:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->accy;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case ACCZ:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->accz;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case GYROX:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->gyrox;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case GYROY:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->gyroy;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case GYROZ:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->gyroz;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case TEMP:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->temp;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					default:
+
+					break;
+				}
+			}
+		}
+	}
+
 	return RETURN_OK;
 }
 
@@ -616,3 +702,4 @@ RETURN_STATUS dacq_delall(void)
 	}
 	return RETURN_OK;
 }
+

@@ -30,6 +30,10 @@ typedef enum {
  	ACCX,
  	ACCY,
  	ACCZ,
+	GYROX,
+	GYROY,
+	GYROZ,
+	TEMP,
  	SERIALLAST,
 } dataacq_quantity_t;
 
