@@ -16,6 +16,7 @@
 #include "adc_hal_cm4.h"
 #include "sdramfs.h"
 #include "mpu-9250.h"
+#include "beasth7.h"
 
 static volatile dataacq_setup_t datacq;
 static volatile uint8_t buffer[TX1BUFFERSIZE];
@@ -27,6 +28,7 @@ static uint8_t *datacq_serial_data = NULL;
 RETURN_STATUS dacq_add_id_to_adc_columns(uint32_t id);
 RETURN_STATUS dacq_add_id_to_serial_columns(uint32_t id);
 RETURN_STATUS dacq_enable_serial(uint32_t address);
+RETURN_STATUS dacq_csv_set_format(uint8_t *frmt, uint8_t *pattern);
 
 RETURN_STATUS dacq_init(void)
 {
@@ -88,7 +90,14 @@ RETURN_STATUS daqc_set_colnum(uint8_t num)
 RETURN_STATUS dacq_start_acq(void)
 {
 	// ukonci bezici ulohu, pokud je aktivni
-	dacq_stop_acq();
+	// zastav periferie a ukladani
+	dacq_stop_logging();
+
+	// ukonci sluzbu Datacq_service
+	if (datacq.taskid != 0)
+	{
+		Scheduler_Delete_Task(datacq.taskid);
+	}
 
 	sdramfs_record_t adc_record;						// zaznam pro soubor k ulozeni ADC dat
 	sdramfs_record_t serial_record;						// zaznam pro soubor k ulozeni seriovych dat
@@ -149,7 +158,7 @@ RETURN_STATUS dacq_start_acq(void)
 	}
 
 	// zaloz novou sluzbu pro ukonceni zaznamu
-	datacq.taskid = Scheduler_Add_Task(Datacq_service, datacq.period, 0);
+	datacq.taskid = Scheduler_Add_Task(Datacq_service, datacq.period + 1000/datacq.freq, 0);
 	if (datacq.taskid == SCH_MAX_TASKS)
 	{
 		// chyba pri zalozeni service
@@ -207,13 +216,17 @@ RETURN_STATUS dacq_start_acq(void)
 
 RETURN_STATUS dacq_stop_acq(void)
 {
-	adc_dma_unconfig();
+	// zastav periferie a ukladani
+	dacq_stop_logging();
 
+	// ukonci sluzbu Datacq_service
 	if (datacq.taskid != 0)
 	{
 		Scheduler_Delete_Task(datacq.taskid);
-		datacq.taskid = 0;
 	}
+
+	// vypis zaverecnou zpravu
+	dacq_logging_finished_message();
 
 	return RETURN_OK;
 }
@@ -312,12 +325,17 @@ RETURN_STATUS dacq_csv(void)
 	volatile uint8_t column;
 	volatile uint8_t part;
 	volatile int32_t number;
+	volatile float f_number;
 	uint8_t text[] = "         ";
 
 	// vytvor hlavicku zaznamu
 	buffer[0] = '\r';
 	buffer[1] = '\n';
 	buffer_index = 2;
+
+	// priprava pro timestamp
+	volatile float f_timestamp = 0.0f;
+
 	for (column = 0; column < datacq.num_of_columns; column++)
 	{
 		switch(datacq.quantity_in_column[column])
@@ -352,6 +370,31 @@ RETURN_STATUS dacq_csv(void)
 				text[strlen("ACCZ")] = 0;
 			break;
 
+			case GYROX:
+				memcpy(&text, (const char *)"GYRX", strlen("GYRX"));
+				text[strlen("GYRX")] = 0;
+			break;
+
+			case GYROY:
+				memcpy(&text, (const char *)"GYRY", strlen("GYRY"));
+				text[strlen("GYRY")] = 0;
+			break;
+
+			case GYROZ:
+				memcpy(&text, (const char *)"GYRZ", strlen("GYRZ"));
+				text[strlen("GYRZ")] = 0;
+			break;
+
+			case TEMP:
+				memcpy(&text, (const char *)"TEMP", strlen("TEMP"));
+				text[strlen("TEMP")] = 0;
+			break;
+
+			case TIME:
+				memcpy(&text, (const char *)"timestamp", strlen("timestamp"));
+				text[strlen("timestamp")] = 0;
+			break;
+
 			default:
 				memcpy(&text, (const char *)" -- ", strlen(" -- "));
 			break;
@@ -368,14 +411,17 @@ RETURN_STATUS dacq_csv(void)
 				vspfunc(0, "%s, ", buffer);
 				buffer_index += 2;
 			}
-			else
-			{
-				// zakonci strednikem
-				vspfunc(0, "%s;", buffer);
-			}
+//			else
+//			{
+//				// zakonci strednikem
+//				vspfunc(0, "%s;", buffer);
+//			}
 		}
 	}
 	uart1_send_message((uint8_t *)buffer, strlen((const char *)buffer));
+
+	// format string
+	volatile uint8_t format[] = "%f   ";
 
 	// projdi pres vsechny radky
 	while (lines--)
@@ -392,56 +438,190 @@ RETURN_STATUS dacq_csv(void)
 			{
 				case AIN1:
 					number = *p_ainputs;
+					// prevod na fyzikalni rozmer
+					#ifdef ADCRES_16B
+					f_number = ADCRANGEV * number / 65536;
+					#endif // ADCRES_16B
+					#ifdef ADCRES_14B
+					f_number = ADCRANGEV * number / 16384;
+					#endif // ADCRES_14B
+					#ifdef ADCRES_12B
+					f_number = ADCRANGEV * number / 4096;
+					#endif // ADCRES_12B
+					#ifdef ADCRES_10B
+					f_number = ADCRANGEV * number / 1024;
+					#endif // ADCRES_10B
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.3f");
 				break;
 
 				case AIN2:
 					number = *(p_ainputs + 1);
+					// prevod na fyzikalni rozmer
+					#ifdef ADCRES_16B
+					f_number = ADCRANGEV * number / 65536;
+					#endif // ADCRES_16B
+					#ifdef ADCRES_14B
+					f_number = ADCRANGEV * number / 16384;
+					#endif // ADCRES_14B
+					#ifdef ADCRES_12B
+					f_number = ADCRANGEV * number / 4096;
+					#endif // ADCRES_12B
+					#ifdef ADCRES_10B
+					f_number = ADCRANGEV * number / 1024;
+					#endif // ADCRES_10B
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.3f");
 				break;
 
 				case AIN3:
 					number = *(p_ainputs + 2);
+					// prevod na fyzikalni rozmer
+					#ifdef ADCRES_16B
+					f_number = ADCRANGEV * number / 65536;
+					#endif // ADCRES_16B
+					#ifdef ADCRES_14B
+					f_number = ADCRANGEV * number / 16384;
+					#endif // ADCRES_14B
+					#ifdef ADCRES_12B
+					f_number = ADCRANGEV * number / 4096;
+					#endif // ADCRES_12B
+					#ifdef ADCRES_10B
+					f_number = ADCRANGEV * number / 1024;
+					#endif // ADCRES_10B
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.3f");
 				break;
 
 				case ACCX:
 					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef ACC_RANGE_2G
+					f_number = number / 16384.0f;
+					#endif // ACC_RANGE_2G
+					#ifdef ACC_RANGE_4G
+					f_number = number / 8192.0f;
+					#endif // ACC_RANGE_4G
+					#ifdef ACC_RANGE_8G
+					f_number = number / 4096.0f;
+					#endif // ACC_RANGE_8G
+					#ifdef ACC_RANGE_16G
+					f_number = number / 2048.0f;
+					#endif // ACC_RANGE_16G
 					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.5f");
 				break;
 
 				case ACCY:
 					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef ACC_RANGE_2G
+					f_number = number / 16384.0f;
+					#endif // ACC_RANGE_2G
+					#ifdef ACC_RANGE_4G
+					f_number = number / 8192.0f;
+					#endif // ACC_RANGE_4G
+					#ifdef ACC_RANGE_8G
+					f_number = number / 4096.0f;
+					#endif // ACC_RANGE_8G
+					#ifdef ACC_RANGE_16G
+					f_number = number / 2048.0f;
+					#endif // ACC_RANGE_16G
 					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.5f");
 				break;
 
 				case ACCZ:
 					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef ACC_RANGE_2G
+					f_number = number / 16384.0f;
+					#endif // ACC_RANGE_2G
+					#ifdef ACC_RANGE_4G
+					f_number = number / 8192.0f;
+					#endif // ACC_RANGE_4G
+					#ifdef ACC_RANGE_8G
+					f_number = number / 4096.0f;
+					#endif // ACC_RANGE_8G
+					#ifdef ACC_RANGE_16G
+					f_number = number / 2048.0f;
+					#endif // ACC_RANGE_16G
 					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.5f");
 				break;
 
 				case GYROX:
 					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef GYRO_RANGE_250
+					f_number = number / 131.0f;
+					#endif // GYRO_RANGE_250
+					#ifdef GYRO_RANGE_500
+					f_number = number / 65.5f;
+					#endif // GYRO_RANGE_500
+					#ifdef GYRO_RANGE_1000
+					f_number = number / 32.8f;
+					#endif // GYRO_RANGE_1000
+					#ifdef GYRO_RANGE_2000
+					f_number = number / 16.4f;
+					#endif // GYRO_RANGE_2000
 					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
 				break;
 
 				case GYROY:
 					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef GYRO_RANGE_250
+					f_number = number / 131.0f;
+					#endif // GYRO_RANGE_250
+					#ifdef GYRO_RANGE_500
+					f_number = number / 65.5f;
+					#endif // GYRO_RANGE_500
+					#ifdef GYRO_RANGE_1000
+					f_number = number / 32.8f;
+					#endif // GYRO_RANGE_1000
+					#ifdef GYRO_RANGE_2000
+					f_number = number / 16.4f;
+					#endif // GYRO_RANGE_2000
 					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
 				break;
 
 				case GYROZ:
 					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef GYRO_RANGE_250
+					f_number = number / 131.0f;
+					#endif // GYRO_RANGE_250
+					#ifdef GYRO_RANGE_500
+					f_number = number / 65.5f;
+					#endif // GYRO_RANGE_500
+					#ifdef GYRO_RANGE_1000
+					f_number = number / 32.8f;
+					#endif // GYRO_RANGE_1000
+					#ifdef GYRO_RANGE_2000
+					f_number = number / 16.4f;
+					#endif // GYRO_RANGE_2000
 					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
 				break;
 
 				case TEMP:
 					number = (int16_t)*p_serials;
+					f_number = number * 1.0f;
 					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%4.1f");
+				break;
+
+				case TIME:
+					f_timestamp += (1000.0f/datacq.freq);
+					f_number = f_timestamp;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%9.3f");
 				break;
 
 				default:
 					number = 0;
 				break;
 			}
-			part = vspfunc(buffer_index, "%d", number);
+			part = vspfunc(buffer_index, (char *)format, f_number);
 			if (part != 0)
 			{
 				// doslo k uspesnemu prevodu
@@ -453,11 +633,11 @@ RETURN_STATUS dacq_csv(void)
 					vspfunc(0, "%s, ", buffer);
 					buffer_index += 2;
 				}
-				else
-				{
-					// zakonci strednikem
-					vspfunc(0, "%s;", buffer);
-				}
+//				else
+//				{
+//					// zakonci strednikem
+//					vspfunc(0, "%s;", buffer);
+//				}
 			}
 		}
 		uart1_send_message((uint8_t *)buffer, strlen((const char *)buffer));
@@ -467,13 +647,13 @@ RETURN_STATUS dacq_csv(void)
 	return RETURN_OK;
 }
 
-uint32_t vspfunc(uint16_t index, char *format, ...)
+uint32_t vspfunc(uint16_t index, char *frmt, ...)
 {
    va_list aptr;
    uint32_t ret;
 
-   va_start(aptr, format);
-   ret = vsprintf((char *)&buffer[index], format, aptr);
+   va_start(aptr, frmt);
+   ret = vsprintf((char *)&buffer[index], frmt, aptr);
    va_end(aptr);
 
    return(ret);
@@ -520,7 +700,7 @@ uint32_t dacq_calculate_dma_size(void)
 
 	// spocitej pro pocet vsech ADC kanalu
 	size = sizeof(uint16_t) * datacq.freq * (datacq.period/1000 + 1 + 2);
-	// kazda zapocata cast sekundy se zapocitana jako cela sekunda - efektivni ale rychle
+	// kazda zapocata cast sekundy se zapocitana jako cela sekunda - neefektivni ale rychle
 	// dale +2 pro udalost ihned po odstartovani casovace a po skonceni, kdy casovac jeste dojede
 
 	return size;
@@ -713,6 +893,36 @@ RETURN_STATUS dacq_logging_finished_message(void)
 	vspfunc(0, "%d", linenumbers);
 	vspfunc(0, "%s lines logged\r\n", buffer);
 	uart1_send_message((uint8_t *)buffer, strlen((const char *)buffer));
+
+	return RETURN_OK;
+}
+
+RETURN_STATUS dacq_stop_logging(void)
+{
+	// ukonci sber adc kanalu
+	if (dacq_number_of_adc_channels() != 0)
+	{
+		adc_dma_unconfig();
+	}
+
+	// ukonci sber serial kanalu
+	dacq_set_serial_setup(SERIAL_ACQ_DISABLED);
+
+	// zastav synchronizacni casovac
+	adc_sync_timer_deinit();
+
+	// zrus sluzbu progress baru
+	dacq_cancel_progressbar();
+
+	// zhasni LEDD
+	HAL_GPIO_WritePin(LEDD_GPIO_PORT, LEDD_PIN, GPIO_PIN_SET);
+
+	return RETURN_OK;
+}
+
+RETURN_STATUS dacq_csv_set_format(uint8_t *frmt, uint8_t *pattern)
+{
+	memcpy(frmt, (char *)pattern, strlen((char *)pattern));
 
 	return RETURN_OK;
 }

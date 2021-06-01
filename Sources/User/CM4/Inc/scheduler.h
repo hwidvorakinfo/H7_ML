@@ -8,7 +8,7 @@
 
 extern void Scheduler_Dispatch_Tasks(void);
 extern void Scheduler_Dispatch_Task_with_index(uint8_t index);
-extern unsigned char Scheduler_Add_Task(void (*pFunction)(void), const unsigned int DELAY, const unsigned int PERIOD);
+extern unsigned char Scheduler_Add_Task(void (*pFunction)(void), const uint32_t DELAY, const uint32_t PERIOD);
 extern unsigned char Scheduler_Delete_Task(const unsigned char TASK_INDEX);
 extern void Scheduler_init(void);
 extern void Scheduler_start(void);
@@ -20,8 +20,8 @@ uint8_t Scheduler_get_running_task(void);
 typedef struct
 {
 	void (*pTask)(void);						// Pointer to the task (must be a 'void (void)' function)
-	uint16_t Delay;								// Delay (ticks) until the function will (next) be run
-	uint16_t Period;							// Interval (ticks) between subsequent runs.
+	uint32_t Delay;								// Delay (ticks) until the function will (next) be run
+	uint32_t Period;							// Interval (ticks) between subsequent runs.
 	uint8_t RunMe;								// Incremented (by scheduler) when task is due to execute
 } sTask;
 

@@ -362,7 +362,7 @@ CMD_RETURN command_col(void *p_i)
 {
 	uint8_t *p_char = (uint8_t *)p_i;
 
-	// prikaz ma tvar "CNxxxx", kde N je cislo od 0 do 9, xxxx je TEXT
+	// prikaz ma tvar "Cnxxxx", kde n je cislo od 0 do 9, xxxx je TEXT
 	uint8_t i;
 
 #define COL_N		(1)
@@ -396,10 +396,11 @@ CMD_RETURN command_col(void *p_i)
 	const uint8_t accx[] = "ACCX";
 	const uint8_t accy[] = "ACCY";
 	const uint8_t accz[] = "ACCZ";
-	const uint8_t gyrox[] = "GYROX";
-	const uint8_t gyroy[] = "GYROY";
-	const uint8_t gyroz[] = "GYROZ";
+	const uint8_t gyrox[] = "GYRX";
+	const uint8_t gyroy[] = "GYRY";
+	const uint8_t gyroz[] = "GYRZ";
 	const uint8_t temp[] = "TEMP";
+	const uint8_t time[] = "TIME";
 
 	if (strcmp((const char *)operand, (const char *)ain1) == 0)
 	{
@@ -460,6 +461,12 @@ CMD_RETURN command_col(void *p_i)
 		// operand je TEMP
 		daqc_set_colfunc(column, NULL);
 		dacq_set_colquantity(column, (dataacq_quantity_t)TEMP);
+		}
+	else if (strcmp((const char *)operand, (const char *)time) == 0)
+	{
+		// operand je TIME
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)TIME);
 		}
 	else
 	{

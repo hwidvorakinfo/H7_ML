@@ -12,6 +12,7 @@
 #include "beasth7.h"
 #include "mpu-9250.h"
 #include "mikrobus.h"
+#include "dataacq_types.h"
 
 static volatile uint8_t i2c_buffer[MPU_DATA_LEN];
 
@@ -28,8 +29,34 @@ RETURN_STATUS mpu_whoami(void)
 	if (i2c_buffer[0] == MPU9250WHOAMIRESPONSE)
 	{
 		mpu_config();
+
+		// ACC range config
+#ifdef ACC_RANGE_2G
 		mpu_set_acc_range(MPU_ACC_RANGE_2G);
+#endif // ACC_RANGE_2G
+#ifdef ACC_RANGE_4G
+		mpu_set_acc_range(MPU_ACC_RANGE_4G);
+#endif // ACC_RANGE_4G
+#ifdef ACC_RANGE_8G
+		mpu_set_acc_range(MPU_ACC_RANGE_8G);
+#endif // ACC_RANGE_8G
+#ifdef ACC_RANGE_16G
+		mpu_set_acc_range(MPU_ACC_RANGE_16G);
+#endif // ACC_RANGE_16G
+
+		// GYRO range config
+#ifdef GYRO_RANGE_250
 		mpu_set_gyro_range(MPU_GYRO_RANGE_250DPS);
+#endif // GYRO_RANGE_250
+#ifdef GYRO_RANGE_500
+		mpu_set_gyro_range(MPU_GYRO_RANGE_500DPS);
+#endif // GYRO_RANGE_500
+#ifdef GYRO_RANGE_1000
+		mpu_set_gyro_range(MPU_GYRO_RANGE_1000DPS);
+#endif // GYRO_RANGE_1000
+#ifdef GYRO_RANGE_2000
+		mpu_set_gyro_range(MPU_GYRO_RANGE_2000DPS);
+#endif // GYRO_RANGE_2000
 
 		return RETURN_OK;
 	}

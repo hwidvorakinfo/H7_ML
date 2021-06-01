@@ -79,7 +79,7 @@ void Scheduler_Dispatch_Task_with_index(uint8_t index)
 	}
 }
 
-unsigned char Scheduler_Add_Task(void (*pFunction)(void), const unsigned int DELAY, const unsigned int PERIOD)
+unsigned char Scheduler_Add_Task(void (*pFunction)(void), const uint32_t DELAY, const uint32_t PERIOD)
 {
 	unsigned char Index = 0;
 	

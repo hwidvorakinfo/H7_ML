@@ -222,8 +222,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 					Tx1.status = TRANSFERING;
 					if(HAL_UART_Transmit_IT(&Uart1Handle, (uint8_t *)&reply, 1) != HAL_OK)
 					{
-						// TODO recovery z teto chyby je nutne, muze se stat pri prijmu ceskych znaku
-						Error_Handler();
+						// chyby osetreny jeste pred vysilanim
+						//Error_Handler();
 					}
 				}
 				else
@@ -231,7 +231,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *UartHandle)
 					Rx1.escape = FALSE;
 				}
 			}
-			else if (reply == 0x1B)
+			else if (reply == '\e')
 			{
 				// escape znak - priste nic nevypisuj
 				Rx1.escape = TRUE;

@@ -20,7 +20,7 @@
 
 #define PROGRESSBARLENGTH						10
 
-uint32_t vspfunc(uint16_t index, char *format, ...);
+uint32_t vspfunc(uint16_t index, char *frmt, ...);
 
 RETURN_STATUS dacq_init(void);
 RETURN_STATUS dacq_set_freq(uint32_t freq);
@@ -51,6 +51,7 @@ RETURN_STATUS dacq_cancel_progressbar(void);
 RETURN_STATUS dacq_increment_line_numbers(void);
 RETURN_STATUS dacq_read_serial_channels(void);
 RETURN_STATUS dacq_logging_finished_message(void);
+RETURN_STATUS dacq_stop_logging(void);
 
 
 #ifdef __cplusplus

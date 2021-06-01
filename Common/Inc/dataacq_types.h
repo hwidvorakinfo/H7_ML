@@ -35,6 +35,7 @@ typedef enum {
 	GYROZ,
 	TEMP,
  	SERIALLAST,
+	TIME,
 } dataacq_quantity_t;
 
 typedef enum {
@@ -53,6 +54,21 @@ typedef struct {
  	dataacq_serialsetup_t serialsetup;
 } dataacq_setup_t;
 
+#define ADCRES_16B					ADC_RESOLUTION_16B
+//define ADCRES_14B					ADC_RESOLUTION_14B
+//#define ADCRES_12B				ADC_RESOLUTION_12B
+//#define ADCRES_10B				ADC_RESOLUTION_10B
+#define ADCRANGEV					3.3f
+
+#define ACC_RANGE_2G
+//#define ACC_RANGE_4G
+//#define ACC_RANGE_8G
+//#define ACC_RANGE_16G
+
+#define GYRO_RANGE_250
+//#define GYRO_RANGE_500
+//#define GYRO_RANGE_1000
+//#define GYRO_RANGE_2000
 
 
 #ifdef __cplusplus

@@ -101,28 +101,10 @@ void Reset_service(void)
 // sluzba pro vysilani dat
 void Datacq_service(void)
 {
-	//datacq_send_data();
-
-	// ukonci sber adc kanalu
-	if (dacq_number_of_adc_channels() != 0)
-	{
-		adc_dma_unconfig();
-	}
-
-	// ukonci sber serial kanalu
-	dacq_set_serial_setup(SERIAL_ACQ_DISABLED);
-
-	// zastav synchronizacni casovac
-	adc_sync_timer_deinit();
-
-	// zrus sluzbu progress baru
-	dacq_cancel_progressbar();
+	dacq_stop_logging();
 
 	// vypis zaverecnou zpravu
 	dacq_logging_finished_message();
-
-	// zhasni LEDD
-	HAL_GPIO_WritePin(LEDD_GPIO_PORT, LEDD_PIN, GPIO_PIN_SET);
 }
 
 // sluzba pro vypis progress baru
