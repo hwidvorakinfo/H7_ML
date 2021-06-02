@@ -33,7 +33,8 @@
 
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
-#define appliSTACK_SIZE configMINIMAL_STACK_SIZE *2
+#define appliSTACK_SIZE 				configMINIMAL_STACK_SIZE *2
+#define classifierSTACK_SIZE 			2048
 /* Exported macro ------------------------------------------------------------*/
 /* Exported functions ------------------------------------------------------- */
 

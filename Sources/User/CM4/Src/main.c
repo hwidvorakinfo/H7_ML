@@ -29,6 +29,7 @@
 #include "openamp.h"
 #include "dataacq.h"
 #include "mikrobus.h"
+#include "amp_messaging_cm4.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -43,44 +44,12 @@
 /* Private macro -------------------------------------------------------------*/
 #define RPMSG_SERVICE_NAME              "BH7_ML"
 /* Private variables ---------------------------------------------------------*/
-volatile msg_t tx_message;
-volatile msg_t rx_message;
-static volatile int16_t received_data;
-static volatile uint16_t message_received;
-
 volatile struct rpmsg_endpoint rp_endpoint;
 /* Private function prototypes -----------------------------------------------*/
 
 /* Private functions ---------------------------------------------------------*/
 
 HSEM_TypeDef * HSEM_DEBUG= HSEM;
-
-static int rpmsg_recv_callback(struct rpmsg_endpoint *ept, void *data, size_t len, uint32_t src, void *priv)
-{
-//	received_data = *((unsigned int *) data);
-//	message_received = 1;
-
-	memcpy((void *)&rx_message, data, len);
-
-	received_data = len;
-	message_received = 1;
-
-	return 0;
-}
-
-unsigned int receive_message(void)
-{
-	if (message_received == 0)
-	{
-		OPENAMP_check_for_message();
-		return 0;
-	}
-	else
-	{
-		message_received = 0;
-		return received_data;
-	}
-}
 
 
 /**

@@ -12,6 +12,7 @@
 #include "services.h"
 #include "dataacq.h"
 #include "adc_hal_cm4.h"
+#include "classifier.h"
 
 // prikazy
 static const uint8_t COMMAND_BLANK[] = "";
@@ -43,6 +44,9 @@ static command_t cmd_csv = {(uint8_t *)&COMMAND_CSV, &cmd_export, TRUE};			// ex
 
 static const uint8_t COMMAND_DELALL[] = "DELALL";
 static command_t cmd_del = {(uint8_t *)&COMMAND_DELALL, &cmd_delall, TRUE};			// vymazani vseho
+
+static const uint8_t COMMAND_CLASSEN[] = "CLASSEN";
+static command_t cmd_cl_en = {(uint8_t *)&COMMAND_DELALL, &cmd_classen, TRUE};		// spusteni clasiffieru
 
 
 
@@ -148,6 +152,17 @@ void commands_process(void)
 		{
 			// zavolani obsluzne funkce prikazu
 			p_func = cmd_del.p_itemfunc;
+			p_func(usart_get_rx_buffer());
+		}
+		return;
+	}
+	// parsing prikazu CLASSEN
+	else if (commands_parse((uint8_t *)&COMMAND_CLASSEN, usart_get_rx_buffer()) == COMMANDOK)
+	{
+		if (cmd_cl_en.enabled)
+		{
+			// zavolani obsluzne funkce prikazu
+			p_func = cmd_cl_en.p_itemfunc;
 			p_func(usart_get_rx_buffer());
 		}
 		return;
@@ -664,6 +679,30 @@ COMMAND_STATUS cmd_delall(void *p_i)
 CMD_RETURN command_delall(void *p_i)
 {
 	if (dacq_delall() == RETURN_OK)
+	{
+		commands_ok_cmd();
+		return RETURN_OK;
+	}
+	else
+	{
+		commands_wrong_cmd();
+		return RETURN_ERROR;
+	}
+}
+
+// prikaz CLASSEN
+COMMAND_STATUS cmd_classen(void *p_i)
+{
+	if (command_classen(p_i) == RETURN_ERROR)
+	{
+		return COMMANDWRONG;
+	}
+	return COMMANDOK;
+}
+
+CMD_RETURN command_classen(void *p_i)
+{
+	if (class_send_enable() == RETURN_OK)
 	{
 		commands_ok_cmd();
 		return RETURN_OK;

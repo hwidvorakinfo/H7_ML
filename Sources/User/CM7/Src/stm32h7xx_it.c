@@ -150,36 +150,6 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief  This function handles external lines 15 to 10 interrupt request.
-  * @param  None
-  * @retval None
-  */
-//void EXTI15_10_IRQHandler(void)
-//{
-//  HAL_GPIO_EXTI_IRQHandler(BUTTON1_PIN);
-//}
-
-/**
-  * @brief  This function handles CM4 Send event interrupt for CM7 interrupt request.
-  * @param  None
-  * @retval None
-  */
-//void CM4_SEV_IRQHandler(void)
-//{
-//
-//}
-
-/**
-  * @brief  This function handles external line 2 interrupt request.
-  * @param  None
-  * @retval None
-  */
-void EXTI2_IRQHandler(void)
-{
-  HAL_GPIO_EXTI_IRQHandler(BUTTON1_PIN);
-}
-
-/**
   * @brief  This function handles HSEM1 interrupt request.
   * @param  None
   * @retval None

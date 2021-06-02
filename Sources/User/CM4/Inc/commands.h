@@ -46,6 +46,7 @@ COMMAND_STATUS cmd_start(void *p_i);
 COMMAND_STATUS cmd_stop(void *p_i);
 COMMAND_STATUS cmd_export(void *p_i);
 COMMAND_STATUS cmd_delall(void *p_i);
+COMMAND_STATUS cmd_classen(void *p_i);
 
 // tela prikazu
 CMD_RETURN command_reset(void *p_i);
@@ -57,6 +58,7 @@ CMD_RETURN command_start(void *p_i);
 CMD_RETURN command_stop(void *p_i);
 CMD_RETURN command_csv(void *p_i);
 CMD_RETURN command_delall(void *p_i);
+CMD_RETURN command_classen(void *p_i);
 
 #ifdef __cplusplus
 }

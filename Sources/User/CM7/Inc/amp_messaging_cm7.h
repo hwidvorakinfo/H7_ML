@@ -17,6 +17,7 @@
 
 void new_service_cb(struct rpmsg_device *rdev, const char *name, uint32_t dest);
 void amp_set_status(AMP_MESSAGING_STATUS status);
+AMP_MESSAGING_STATUS amp_get_status(void);
 int16_t amp_send_message(uint16_t cmd, void *data, uint16_t length);
 void amp_send_alive_message(void);
 int16_t amp_receive_message(void);

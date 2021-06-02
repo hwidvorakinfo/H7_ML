@@ -23,7 +23,7 @@
 /* private prototypes */
 
 extern volatile struct rpmsg_endpoint rp_endpoint;
-extern volatile msg_t rx_message;
+extern volatile msg_t rx_message[AMP_RX_MESSAGE_BUFFER_LEN];
 
 void Msg_service(void)
 {
@@ -41,13 +41,15 @@ void Msg_timeout_service(void)
 
 void Receive_service(void)
 {
-	static volatile uint16_t len = 0;
-	len = receive_message();
+	static volatile uint16_t number_of_messages_received = 0;
+	volatile uint8_t index = 0;
 
-	// zprava o pripravene komunikaci
-	if (len != 0)
+	number_of_messages_received = amp_receive_message();
+	while (number_of_messages_received > 0)
 	{
-		switch (rx_message.header.cmd)
+		//rx_message[index++];				// ukazatel na nejstarsi zpravu ke zpracovani
+
+		switch (rx_message[index].header.cmd)
 		{
 			case MSG_COMM_BIND:
 				if(Scheduler_Add_Task(Msg_service, 0, MSG_SERVICE_PERIOD) == SCH_MAX_TASKS)
@@ -62,13 +64,18 @@ void Receive_service(void)
 			break;
 
 			case MSG_UART_MSG:
-				uart1_send_message((uint8_t *)&rx_message.data, rx_message.header.length);
+				uart1_send_message((uint8_t *)rx_message[index].data, rx_message[index].header.length);
 			break;
 
 			default:
 			break;
 		}
+		rx_message[index].header.cmd = 0;							// zneplatni zpravu
+		number_of_messages_received--;								// sniz pocet zprav ke zpracovani
+		index++;													// zvys index dalsi zpravy ke zpracovani
+
 	}
+
 }
 
 // sluzba pro dekodovani prikazu

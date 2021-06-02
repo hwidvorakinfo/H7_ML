@@ -34,6 +34,8 @@
 #include "msg_types.h"
 #include "amp_messaging_cm7.h"
 #include "arm_common_tables.h"
+#include "leds.h"
+#include "classifier.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -52,23 +54,25 @@
 extern struct rpmsg_endpoint rp_endpoint;
 
 osSemaphoreId osSemaphore_ChannelCreation;
-static volatile uint8_t flag = 0;
-
-static bool debug_nn = true; // Set this to true to see e.g. features generated from the raw signal
-static int16_t array[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];
 
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
 static void CPU_CACHE_Enable(void);
-static void EXTI2_IRQHandler_Config(void);
-//static void Error_Handler(void);
 static void MPU_Config(void);
 static void SystemClock_Config(void);
+
+// thread handlery
 static void Thread_Init(void const *argument);
 static void Thread_ReadMailbox(void const *argument);
+static void Thread_Classifier(void const *argument);
 
+// definice threadu
 osThreadDef(Thread0, Thread_Init, osPriorityLow, 0, appliSTACK_SIZE);
 osThreadDef(Thread1, Thread_ReadMailbox, osPriorityNormal, 1, configMINIMAL_STACK_SIZE);
+osThreadDef(Thread2, Thread_Classifier, osPriorityHigh, 1, classifierSTACK_SIZE);
+
+// classifier
+static int16_t array[EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE];
 
 /* Private functions ---------------------------------------------------------*/
 
@@ -77,10 +81,10 @@ osThreadDef(Thread1, Thread_ReadMailbox, osPriorityNormal, 1, configMINIMAL_STAC
 
 void ei_printf(const char *format, ...)
 {
-    va_list myargs;
-    va_start(myargs, format);
-    vprint(format, myargs);
-    va_end(myargs);
+	va_list myargs;
+	va_start(myargs, format);
+	vprint(format, myargs);
+	va_end(myargs);
 }
 
 /**
@@ -172,14 +176,6 @@ int main(void)
   /* Configure the MPU attributes as Write Through for SDRAM*/
   MPU_Config();
 
-//  // test zapisu do SDRAM
-//  	volatile uint32_t *p_word = (uint32_t *)0xD0000000;
-//  	uint32_t i;
-//  	for (i = 0; i < 10; i++)
-//  	{
-//  		*p_word++ = i;
-//  	}
-
   if (HAL_Init() != HAL_OK)
   {
     Error_Handler();
@@ -197,52 +193,15 @@ int main(void)
 	  Error_Handler();
   }
 
-//	ei_printf("\r\nInferencing settings:\r\n");
-//	ei_printf("\tInterval: %.2f ms.\r\n", (float)EI_CLASSIFIER_INTERVAL_MS);
-//	ei_printf("\tFrame size: %d\r\n", EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
-//	ei_printf("\tSample length: %d ms.\r\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT / 16);
-//	ei_printf("\tNo. of classes: %d\r\n", sizeof(ei_classifier_inferencing_categories) / sizeof(ei_classifier_inferencing_categories[0]));
-//
-//	int print_results = -(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW);
-//
-////	while (1)
-////	{
-//	  // Do classification (i.e. the inference part)
-//	  signal_t signal;
-//	  signal.total_length = EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE;
-//	  signal.get_data = &get_signal_data;
-//	  ei_impulse_result_t result = { 0 };
-//	  //EI_IMPULSE_ERROR r = run_classifier_continuous(&signal, &result, debug_nn);
-//	  EI_IMPULSE_ERROR r = run_classifier(&signal, &result, debug_nn);
-//	  if (r != EI_IMPULSE_OK)
-//	  {
-//		  ei_printf("ERROR: Failed to run classifier (%d)\r\n", r);
-////		  break;
-//	  }
-//
-//	  // Print output predictions
-//	  if(++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW >> 1))
-//	  {
-//		  // Comment this section out if you don't want to see the raw scores
-//		  ei_printf("Predictions (DSP: %d ms, NN: %d ms)\r\n", result.timing.dsp, result.timing.classification);
-//		  for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
-//		  {
-//			  ei_printf("    %s: %.5f\r\n", result.classification[ix].label, result.classification[ix].value);
-//		  }
-//		  print_results = 0;
-//	  }
-////	}
+  if (leds_config() != RETURN_OK)
+  {
+	  Error_Handler();
+  }
 
-  /* -1- Initialize LEDs mounted on BeastH7 board */
-  LEDA_GPIO_CLK_ENABLE();
-  GPIO_InitTypeDef gpio_init_structure;
-  gpio_init_structure.Mode = GPIO_MODE_OUTPUT_PP;
-  gpio_init_structure.Pull = GPIO_PULLUP;
-  gpio_init_structure.Speed = GPIO_SPEED_FREQ_HIGH;
-  gpio_init_structure.Pin = LEDA_PIN;
-  HAL_GPIO_Init(LEDA_GPIO_PORT, &gpio_init_structure);
-  HAL_GPIO_WritePin(LEDA_GPIO_PORT, LEDA_PIN, GPIO_PIN_SET);
-
+  if (classifier_config() != RETURN_OK)
+  {
+	  Error_Handler();
+  }
 
   /* Define used semaphore */
   osSemaphoreDef(CHN_CREAT);
@@ -252,6 +211,7 @@ int main(void)
 
   osThreadCreate(osThread(Thread0), NULL);
   osThreadCreate(osThread(Thread1), NULL);
+  osThreadCreate(osThread(Thread2), NULL);
 
   /* Start scheduler */
   osKernelStart();
@@ -304,8 +264,6 @@ static void Thread_Init(void const *argument)
    */
   OPENAMP_Wait_EndPointready(&rp_endpoint);
 
-  amp_set_status(MESSAGING_ALIVE);
-
   // odesli zpravu o priprave na komunikaci
   status = amp_send_message(MSG_COMM_BIND, NULL, 0);
 
@@ -314,13 +272,13 @@ static void Thread_Init(void const *argument)
 	  Error_Handler();
   }
 
-  flag = 10;
+  amp_set_status(MESSAGING_ALIVE);
 
   while (1)
   {
 	  osDelay(1000);
-	  //ei_printf("\r\nAL");
 	  amp_send_alive_message();
+	  //ei_printf("\r\nAL");
   }
 }
 
@@ -336,7 +294,8 @@ static void Thread_ReadMailbox(void const *argument)
 
 	while (1)
 	{
-		while (flag != 10)
+		//while (flag != 10)
+		while (amp_get_status() == MESSAGING_INIT)
 		{
 			osDelay(1);
 		}
@@ -350,6 +309,76 @@ static void Thread_ReadMailbox(void const *argument)
 			len = 0;
 		}
 		osDelay(1);
+	}
+}
+
+/**
+  * @brief  Classifier running thread
+  * @param  argument: Not used
+  * @retval None
+  */
+static void Thread_Classifier(void const *argument)
+{
+	static volatile int16_t len = 0;
+	static bool debug_nn = false; // Set this to true to see e.g. features generated from the raw signal
+
+	while (1)
+	{
+		if (classifier_get_state() == ENABLED)
+		{
+			HAL_GPIO_WritePin(LEDB_GPIO_PORT, LEDB_PIN, GPIO_PIN_RESET);		// rozsvit LEDB
+
+			classifier_set_state(RUNNING);
+
+			uint32_t dsp_start_ms = ei_read_timer_ms();
+
+//			ei_printf("\r\nInferencing settings:\r\n");
+//			ei_printf("\tInterval: %.2f ms.\r\n", (float)EI_CLASSIFIER_INTERVAL_MS);
+//			ei_printf("\tFrame size: %d\r\n", EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
+//			ei_printf("\tSample length: %d ms.\r\n", EI_CLASSIFIER_RAW_SAMPLE_COUNT / 16);
+//			ei_printf("\tNo. of classes: %d\r\n", sizeof(ei_classifier_inferencing_categories) / sizeof(ei_classifier_inferencing_categories[0]));
+
+			int print_results = -(EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW);
+
+			// Do classification (i.e. the inference part)
+			signal_t signal;
+			signal.total_length = EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE;
+			signal.get_data = &get_signal_data;
+			ei_impulse_result_t result = { 0 };
+			//EI_IMPULSE_ERROR r = run_classifier_continuous(&signal, &result, debug_nn);
+			EI_IMPULSE_ERROR r = run_classifier(&signal, &result, debug_nn);
+			uint32_t time = ei_read_timer_ms() - dsp_start_ms;
+			if (r != EI_IMPULSE_OK)
+			{
+				ei_printf("ERROR: Failed to run classifier (%d)\r\n", r);
+			}
+
+//			// Print output predictions
+//			if(++print_results >= (EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW >> 1))
+//			{
+//				// Comment this section out if you don't want to see the raw scores
+//				ei_printf("Predictions (DSP: %d ms, NN: %d ms)\r\n", result.timing.dsp, result.timing.classification);
+//				for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
+//				{
+//				  ei_printf("    %s: %.5f\r\n", result.classification[ix].label, result.classification[ix].value);
+//				}
+//				print_results = 0;
+//			}
+
+			// ukonceni a vysledky
+			classifier_set_state(STOPPED);
+			for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
+			{
+				ei_printf("    %s: %.5f\r\n", result.classification[ix].label, result.classification[ix].value);
+			}
+			ei_printf("    %s: %.5f\r\n", "anomaly", result.anomaly);
+			ei_printf("    %s: %d ms\r\n", "time", time);
+			HAL_GPIO_WritePin(LEDB_GPIO_PORT, LEDB_PIN, GPIO_PIN_SET);		// zhasni LEDB
+		}
+		else
+		{
+			osDelay(10);
+		}
 	}
 }
  
@@ -466,60 +495,6 @@ static void CPU_CACHE_Enable(void)
 }
 
 /**
-  * @brief  Configures EXTI lines 15 to 10 (connected to PC.13 pin) in interrupt mode
-  * @param  None
-  * @retval None
-  */
-//static void EXTI15_10_IRQHandler_Config(void)
-//{
-//  GPIO_InitTypeDef   GPIO_InitStructure;
-//
-//  /* Enable GPIOC clock */
-//  __HAL_RCC_GPIOC_CLK_ENABLE();
-//
-//  /* Configure PC.13 pin as the EXTI input event line in interrupt mode for both CPU1 and CPU2*/
-//  GPIO_InitStructure.Mode = GPIO_MODE_IT_RISING;    /* current CPU (CM7) config in IT rising */
-//  GPIO_InitStructure.Pull = GPIO_NOPULL;
-//  GPIO_InitStructure.Pin = GPIO_PIN_13;
-//  HAL_GPIO_Init(GPIOC, &GPIO_InitStructure);
-//
-//  /* Enable and set EXTI lines 15 to 10 Interrupt to the lowest priority */
-//  HAL_NVIC_SetPriority(EXTI15_10_IRQn, 2, 0);
-//  HAL_NVIC_EnableIRQ(EXTI15_10_IRQn);
-//
-//  /* Configure the second CPU (CM4) EXTI line for IT*/
-//  HAL_EXTI_D2_EventInputConfig(EXTI_LINE13 , EXTI_MODE_IT,  ENABLE);
-//}
-
-/**
-  * @brief  Configures EXTI lines 15 to 10 (connected to PC.13 pin) in interrupt mode
-  * @param  None
-  * @retval None
-  */
-static void EXTI2_IRQHandler_Config(void)
-{
-  GPIO_InitTypeDef   GPIO_InitStructure;
-  
-  /* Enable the button clock */
-  BUTTON1_GPIO_CLK_ENABLE();
-  //__HAL_RCC_SYSCFG_CLK_ENABLE();
-  
-  /* Configure the button pin as the EXTI input event line in interrupt mode for both CPU1 and CPU2*/
-  GPIO_InitStructure.Mode = GPIO_MODE_IT_FALLING; // GPIO_MODE_INPUT; //GPIO_MODE_IT_FALLING;    /* current CPU (CM7) config in IT falling */
-  GPIO_InitStructure.Pull = GPIO_NOPULL;
-  GPIO_InitStructure.Pin = BUTTON1_PIN;
-  HAL_GPIO_Init(BUTTON1_GPIO_PORT, &GPIO_InitStructure);
-  
-  /* Enable and set EXTI line 2 Interrupt to the lowest priority */
-  HAL_NVIC_SetPriority(BUTTON1_EXTI_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(BUTTON1_EXTI_IRQn);
-
-  /* Configure the second CPU (CM4) EXTI line for IT*/
-  //HAL_EXTI_D2_ClearFlag(BUTTON1_EXTI_LINE);
-  //HAL_EXTI_D2_EventInputConfig(BUTTON1_EXTI_LINE, EXTI_MODE_IT, ENABLE);
-}
-
-/**
   * @brief  Configure the MPU attributes as Write Through for External SDRAM.
   * @note   The Base Address is 0xD0000000 .
   *         The Configured Region Size is 32MB because same as SDRAM size.
@@ -552,20 +527,6 @@ static void MPU_Config(void)
   HAL_MPU_Enable(MPU_PRIVILEGED_DEFAULT);
 }
 
-/**
-  * @brief EXTI line detection callbacks
-  * @param GPIO_Pin: Specifies the pins connected EXTI line
-  * @retval None
-  */
-void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
-{
-  
-  if (GPIO_Pin == BUTTON1_PIN)
-  {
-    /* Toggle LEDA */
-	  HAL_GPIO_TogglePin(LEDA_GPIO_PORT, LEDA_PIN);
-  }
-}
 
 #ifdef  USE_FULL_ASSERT
 

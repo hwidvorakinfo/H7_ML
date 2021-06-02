@@ -22,6 +22,7 @@
 #define MSG_COMM_ALIVE					0xA001
 #define MSG_LED_TOGGLE					0xB000
 #define MSG_UART_MSG					0xC000
+#define MSG_CLASS001_MSG				0xD000			// classifier enable
 
 // status openamp messaging systemu
 typedef enum {
