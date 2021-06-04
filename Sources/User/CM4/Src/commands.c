@@ -414,6 +414,9 @@ CMD_RETURN command_col(void *p_i)
 	const uint8_t gyrox[] = "GYRX";
 	const uint8_t gyroy[] = "GYRY";
 	const uint8_t gyroz[] = "GYRZ";
+	const uint8_t magx[] = "MAGX";
+	const uint8_t magy[] = "MAGY";
+	const uint8_t magz[] = "MAGZ";
 	const uint8_t temp[] = "TEMP";
 	const uint8_t time[] = "TIME";
 
@@ -470,6 +473,24 @@ CMD_RETURN command_col(void *p_i)
 		// operand je GYROZ
 		daqc_set_colfunc(column, NULL);
 		dacq_set_colquantity(column, (dataacq_quantity_t)GYROZ);
+	}
+	else if (strcmp((const char *)operand, (const char *)magx) == 0)
+	{
+		// operand je MAGX
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)MAGX);
+	}
+	else if (strcmp((const char *)operand, (const char *)magy) == 0)
+	{
+		// operand je MAGY
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)MAGY);
+	}
+	else if (strcmp((const char *)operand, (const char *)magz) == 0)
+	{
+		// operand je MAGZ
+		daqc_set_colfunc(column, NULL);
+		dacq_set_colquantity(column, (dataacq_quantity_t)MAGZ);
 	}
 	else if (strcmp((const char *)operand, (const char *)temp) == 0)
 	{

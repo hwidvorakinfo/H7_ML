@@ -12,37 +12,44 @@
 #include "string.h"
 #include "stdarg.h"
 #include "classifier.h"
+#include "amp_messaging_cm7.h"
 
 static volatile msg_t tx_message;
-static volatile msg_t rx_message;
-static volatile uint16_t received_data;
+static volatile msg_t rx_message[AMP_RX_MESSAGE_BUFFER_LEN];
+//static volatile uint16_t received_data;
 struct rpmsg_endpoint rp_endpoint;
 static volatile AMP_MESSAGING_STATUS amp_messaging_status = MESSAGING_INIT;
+static volatile uint16_t num_of_received_messages = 0;
 
 extern osSemaphoreId osSemaphore_ChannelCreation;
 
 static int rpmsg_recv_callback(struct rpmsg_endpoint *ept, void *data, size_t len, uint32_t src, void *priv)
 {
-	memcpy((void *)&rx_message, data, len);
-	received_data = len;
+	if (num_of_received_messages < AMP_RX_MESSAGE_BUFFER_LEN)
+	{
+		// je jeste misto v bufferu
+		memcpy((void *)&rx_message[num_of_received_messages], data, len);
+		num_of_received_messages++;
+	}
+	else
+	{
+		// neni misto v bufferu, zpravu zahod
+	}
 
 	return 0;
 }
 
 int16_t amp_receive_message(void)
 {
-	received_data = 0;
-	uint32_t status = 0;
-
-	while (received_data == 0)
+	if (num_of_received_messages == 0)
 	{
-		if (status != osOK)
-			break;
-
 		OPENAMP_check_for_message();
+		return 0;
 	}
-
-	return received_data;
+	else
+	{
+		return num_of_received_messages--;
+	}
 }
 
 void amp_send_alive_message(void)
@@ -114,9 +121,9 @@ int16_t amp_send_message(uint16_t cmd, void *data, uint16_t length)
 	return ret;
 }
 
-RETURN_STATUS amp_message_decode(void)
+RETURN_STATUS amp_message_decode(uint8_t index)
 {
-	switch (rx_message.header.cmd)
+	switch (rx_message[index].header.cmd)
 	{
 		case MSG_LED_TOGGLE:
 			HAL_GPIO_TogglePin(LEDA_GPIO_PORT, LEDA_PIN);
@@ -129,6 +136,8 @@ RETURN_STATUS amp_message_decode(void)
 		default:
 		break;
 	}
+
+	rx_message[index].header.cmd = 0;							// zneplatni zpravu
 
 	return RETURN_OK;
 }

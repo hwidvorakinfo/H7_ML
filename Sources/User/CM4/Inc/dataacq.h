@@ -19,6 +19,7 @@
 #include "dataacq_types.h"
 
 #define PROGRESSBARLENGTH						10
+#define PERIOD_OFFSET							10
 
 uint32_t vspfunc(uint16_t index, char *frmt, ...);
 

@@ -44,7 +44,7 @@
 #define EI_CLASSIFIER_PROJECT_ID                 26031
 #define EI_CLASSIFIER_PROJECT_OWNER              "Petr Dvorak"
 #define EI_CLASSIFIER_PROJECT_NAME               "H7_SINUS"
-#define EI_CLASSIFIER_PROJECT_DEPLOY_VERSION     13
+#define EI_CLASSIFIER_PROJECT_DEPLOY_VERSION     14
 #define EI_CLASSIFIER_NN_INPUT_FRAME_SIZE        11
 #define EI_CLASSIFIER_RAW_SAMPLE_COUNT           128
 #define EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME      1
@@ -75,10 +75,10 @@
 #define EI_CLASSIFIER_HAS_TFLITE_OPS_RESOLVER    1
 
 #define EI_CLASSIFIER_SENSOR                     EI_CLASSIFIER_SENSOR_UNKNOWN
-#define EI_CLASSIFIER_SLICE_SIZE                 (EI_CLASSIFIER_RAW_SAMPLE_COUNT / EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)
 #ifndef EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW
 #define EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW    4
 #endif // EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW
+#define EI_CLASSIFIER_SLICE_SIZE                 (EI_CLASSIFIER_RAW_SAMPLE_COUNT / EI_CLASSIFIER_SLICES_PER_MODEL_WINDOW)
 
 #if EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE && EI_CLASSIFIER_USE_FULL_TFLITE == 1
 #undef EI_CLASSIFIER_INFERENCING_ENGINE
@@ -176,8 +176,11 @@ typedef struct {
     int low_frequency;
     int high_frequency;
     float pre_cof;
+    bool invert_features;
 } ei_dsp_config_audio_syntiant_t;
 
+uint8_t ei_dsp_config_14_axes[] = { 0 };
+const uint32_t ei_dsp_config_14_axes_size = 1;
 ei_dsp_config_spectral_analysis_t ei_dsp_config_14 = {
     1,
     1,

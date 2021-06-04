@@ -22,9 +22,12 @@
 
 /* private prototypes */
 
+static uint8_t msg_task_id = 0;
+
 extern volatile struct rpmsg_endpoint rp_endpoint;
 extern volatile msg_t rx_message[AMP_RX_MESSAGE_BUFFER_LEN];
 
+// sluzba pro posilani periodickych zprav do CM7
 void Msg_service(void)
 {
 	volatile msg_t message;
@@ -44,17 +47,20 @@ void Receive_service(void)
 	static volatile uint16_t number_of_messages_received = 0;
 	volatile uint8_t index = 0;
 
-	number_of_messages_received = amp_receive_message();
-	while (number_of_messages_received > 0)
+	do
 	{
-		//rx_message[index++];				// ukazatel na nejstarsi zpravu ke zpracovani
+		number_of_messages_received = amp_receive_message();
 
 		switch (rx_message[index].header.cmd)
 		{
 			case MSG_COMM_BIND:
-				if(Scheduler_Add_Task(Msg_service, 0, MSG_SERVICE_PERIOD) == SCH_MAX_TASKS)
+				if (msg_task_id == 0)
 				{
-					// chyba pri zalozeni service
+					msg_task_id = Scheduler_Add_Task(Msg_service, 0, MSG_SERVICE_PERIOD);
+					if(msg_task_id == SCH_MAX_TASKS)
+					{
+						// chyba pri zalozeni service
+					}
 				}
 			break;
 
@@ -71,10 +77,9 @@ void Receive_service(void)
 			break;
 		}
 		rx_message[index].header.cmd = 0;							// zneplatni zpravu
-		number_of_messages_received--;								// sniz pocet zprav ke zpracovani
 		index++;													// zvys index dalsi zpravy ke zpracovani
 
-	}
+	}while (number_of_messages_received > 0);
 
 }
 

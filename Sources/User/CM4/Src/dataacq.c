@@ -158,7 +158,7 @@ RETURN_STATUS dacq_start_acq(void)
 	}
 
 	// zaloz novou sluzbu pro ukonceni zaznamu
-	datacq.taskid = Scheduler_Add_Task(Datacq_service, datacq.period + 1000/datacq.freq, 0);
+	datacq.taskid = Scheduler_Add_Task(Datacq_service, datacq.period + PERIOD_OFFSET, 0);
 	if (datacq.taskid == SCH_MAX_TASKS)
 	{
 		// chyba pri zalozeni service
@@ -166,7 +166,7 @@ RETURN_STATUS dacq_start_acq(void)
 	}
 
 	// zaloz novou sluzbu pro vypis prubehu mereni
-	uint32_t pb_period = datacq.period/PROGRESSBARLENGTH;
+	uint32_t pb_period = (datacq.period + PERIOD_OFFSET)/PROGRESSBARLENGTH;
 	if (pb_period == 0)
 	{
 		pb_period = 1;
@@ -385,6 +385,21 @@ RETURN_STATUS dacq_csv(void)
 				text[strlen("GYRZ")] = 0;
 			break;
 
+			case MAGX:
+				memcpy(&text, (const char *)"MAGX", strlen("MAGX"));
+				text[strlen("MAGX")] = 0;
+			break;
+
+			case MAGY:
+				memcpy(&text, (const char *)"MAGY", strlen("MAGY"));
+				text[strlen("MAGY")] = 0;
+			break;
+
+			case MAGZ:
+				memcpy(&text, (const char *)"MAGZ", strlen("MAGZ"));
+				text[strlen("MAGZ")] = 0;
+			break;
+
 			case TEMP:
 				memcpy(&text, (const char *)"TEMP", strlen("TEMP"));
 				text[strlen("TEMP")] = 0;
@@ -600,6 +615,30 @@ RETURN_STATUS dacq_csv(void)
 					#ifdef GYRO_RANGE_2000
 					f_number = number / 16.4f;
 					#endif // GYRO_RANGE_2000
+					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+				break;
+
+				case MAGX:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					f_number = number * 0.15f;
+					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+				break;
+
+				case MAGY:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					f_number = number * 0.15f;
+					p_serials++;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+				break;
+
+				case MAGZ:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					f_number = number * 0.15f;
 					p_serials++;
 					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
 				break;
@@ -840,6 +879,21 @@ RETURN_STATUS dacq_read_serial_channels(void)
 
 					case TEMP:
 						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->temp;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case MAGX:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->magx;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case MAGY:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->magy;
+						datacq_serial_data += sizeof(uint16_t);
+					break;
+
+					case MAGZ:
+						*(uint16_t *)datacq_serial_data = (uint16_t)p_values->magz;
 						datacq_serial_data += sizeof(uint16_t);
 					break;
 

@@ -31,7 +31,9 @@ ei_model_dsp_t ei_dsp_blocks[ei_dsp_blocks_size] = {
     { // DSP block 14
         11,
         &extract_spectral_analysis_features,
-        (void*)&ei_dsp_config_14
+        (void*)&ei_dsp_config_14,
+        ei_dsp_config_14_axes,
+        ei_dsp_config_14_axes_size
     }
 };
 
@@ -40,7 +42,9 @@ ei_model_dsp_i16_t ei_dsp_blocks_i16[ei_dsp_blocks_i16_size] = {
     { // DSP block 14
         11,
         &extract_spectral_analysis_features,
-        (void*)&ei_dsp_config_14
+        (void*)&ei_dsp_config_14,
+        ei_dsp_config_14_axes,
+        ei_dsp_config_14_axes_size
     }
 };
 

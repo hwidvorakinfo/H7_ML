@@ -34,6 +34,9 @@ typedef enum {
 	GYROY,
 	GYROZ,
 	TEMP,
+	MAGX,
+	MAGY,
+	MAGZ,
  	SERIALLAST,
 	TIME,
 } dataacq_quantity_t;

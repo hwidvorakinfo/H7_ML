@@ -14,6 +14,7 @@
 
 static volatile classifier_t classifier;
 
+// inicializace spousteni a vlastnosti classifieru
 RETURN_STATUS classifier_config(void)
 {
 	classifier_set_state(STOPPED);

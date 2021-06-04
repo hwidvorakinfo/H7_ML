@@ -209,9 +209,9 @@ int main(void)
   /* Create the semaphore */
   osSemaphore_ChannelCreation  = osSemaphoreCreate(osSemaphore(CHN_CREAT) , 1);
 
-  osThreadCreate(osThread(Thread0), NULL);
-  osThreadCreate(osThread(Thread1), NULL);
-  osThreadCreate(osThread(Thread2), NULL);
+  osThreadCreate(osThread(Thread0), NULL);		// Init
+  osThreadCreate(osThread(Thread1), NULL);		// ReadMailBox
+  osThreadCreate(osThread(Thread2), NULL);		// Classifier
 
   /* Start scheduler */
   osKernelStart();
@@ -290,25 +290,32 @@ static void Thread_Init(void const *argument)
   */
 static void Thread_ReadMailbox(void const *argument)
 {
-	static volatile int16_t len = 0;
+	static volatile uint16_t number_of_messages_received = 0;
 
 	while (1)
 	{
-		//while (flag != 10)
 		while (amp_get_status() == MESSAGING_INIT)
 		{
 			osDelay(1);
 		}
 
-		/* Receive the message from the remote CPU */
-		len = amp_receive_message();
-
-		if (len != 0)
+		// pokud bezi classifier, nevyzvedavej zpravy
+		if (classifier_get_state() == STOPPED)
 		{
-			amp_message_decode();
-			len = 0;
+			/* Receive the message from the remote CPU */
+			volatile uint8_t index = 0;
+			do
+			{
+				number_of_messages_received = amp_receive_message();
+				amp_message_decode(index);									// zpracuj zpravu z buferu, zacni s nejstarsi
+
+				index++;													// zvys index dalsi zpravy ke zpracovani
+			}
+			while (number_of_messages_received > 0);
 		}
+
 		osDelay(1);
+
 	}
 }
 

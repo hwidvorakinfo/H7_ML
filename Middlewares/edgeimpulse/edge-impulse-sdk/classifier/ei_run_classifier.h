@@ -31,6 +31,7 @@
 #include "ei_run_dsp.h"
 #include "ei_classifier_types.h"
 #include "ei_classifier_smooth.h"
+#include "ei_signal_with_axes.h"
 #if defined(EI_CLASSIFIER_HAS_SAMPLER) && EI_CLASSIFIER_HAS_SAMPLER == 1
 #include "ei_sampler.h"
 #endif
@@ -214,7 +215,7 @@ extern "C" EI_IMPULSE_ERROR run_classifier_continuous(signal_t *signal, ei_impul
         ei_model_dsp_t block = ei_dsp_blocks[ix];
 
         if (out_features_index + block.n_output_features > EI_CLASSIFIER_NN_INPUT_FRAME_SIZE) {
-            ei_printf("ERR: Would write outside feature buffer\r\n");
+            ei_printf("ERR: Would write outside feature buffer\n");
             return EI_IMPULSE_DSP_ERROR;
         }
 
@@ -235,13 +236,23 @@ extern "C" EI_IMPULSE_ERROR run_classifier_continuous(signal_t *signal, ei_impul
             is_mfe = true;
         }
         else {
-            ei_printf("ERR: Unknown extract function, only MFCC, MFE and spectrogram supported\r\n");
+            ei_printf("ERR: Unknown extract function, only MFCC, MFE and spectrogram supported\n");
             return EI_IMPULSE_DSP_ERROR;
         }
 
+#if EIDSP_SIGNAL_C_FN_POINTER
+        if (block.axes_size != EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME) {
+            ei_printf("ERR: EIDSP_SIGNAL_C_FN_POINTER can only be used when all axes are selected for DSP blocks\n");
+            return EI_IMPULSE_DSP_ERROR;
+        }
         int ret = block.extract_fn(signal, &fm, block.config, EI_CLASSIFIER_FREQUENCY);
+#else
+        SignalWithAxes swa(signal, block.axes, block.axes_size);
+        int ret = block.extract_fn(swa.get_signal(), &fm, block.config, EI_CLASSIFIER_FREQUENCY);
+#endif
+
         if (ret != EIDSP_OK) {
-            ei_printf("ERR: Failed to run DSP process (%d)\r\n", ret);
+            ei_printf("ERR: Failed to run DSP process (%d)\n", ret);
             return EI_IMPULSE_DSP_ERROR;
         }
 
@@ -272,12 +283,12 @@ extern "C" EI_IMPULSE_ERROR run_classifier_continuous(signal_t *signal, ei_impul
             ei_printf_float(static_features_matrix.buffer[ix]);
             ei_printf(" ");
         }
-        ei_printf("\r\n");
+        ei_printf("\n");
     }
 
 #if EI_CLASSIFIER_INFERENCING_ENGINE != EI_CLASSIFIER_NONE
     if (debug) {
-        ei_printf("Running neural network...\r\n");
+        ei_printf("Running neural network...\n");
     }
 #endif
 
@@ -356,7 +367,7 @@ __attribute__((unused)) static void fill_result_struct_f32(ei_impulse_result_t *
             if (yend < ystart) yend = ystart;
 
             if (debug) {
-                ei_printf("%s (%f): %f [ %f, %f, %f, %f ]\r\n",
+                ei_printf("%s (%f): %f [ %f, %f, %f, %f ]\n",
                     ei_classifier_inferencing_categories[(uint32_t)label], label, score, xstart, ystart, xend, yend);
             }
 
@@ -385,7 +396,7 @@ __attribute__((unused)) static void fill_result_struct_i8(ei_impulse_result_t *r
         if (debug) {
             ei_printf("%s:\t", ei_classifier_inferencing_categories[ix]);
             ei_printf_float(value);
-            ei_printf("\r\n");
+            ei_printf("\n");
         }
         result->classification[ix].label = ei_classifier_inferencing_categories[ix];
         result->classification[ix].value = value;
@@ -402,7 +413,7 @@ __attribute__((unused)) static void fill_result_struct_f32(ei_impulse_result_t *
         if (debug) {
             ei_printf("%s:\t", ei_classifier_inferencing_categories[ix]);
             ei_printf_float(value);
-            ei_printf("\r\n");
+            ei_printf("\n");
         }
         result->classification[ix].label = ei_classifier_inferencing_categories[ix];
         result->classification[ix].value = value;
@@ -436,14 +447,14 @@ static EI_IMPULSE_ERROR inference_tflite_setup(uint64_t *ctx_start_ms, TfLiteTen
 #if (EI_CLASSIFIER_COMPILED == 1)
     TfLiteStatus init_status = trained_model_init(ei_aligned_malloc);
     if (init_status != kTfLiteOk) {
-        ei_printf("Failed to allocate TFLite arena (error code %d)\r\n", init_status);
+        ei_printf("Failed to allocate TFLite arena (error code %d)\n", init_status);
         return EI_IMPULSE_TFLITE_ARENA_ALLOC_FAILED;
     }
 #else
     // Create an area of memory to use for input, output, and intermediate arrays.
     uint8_t *tensor_arena = (uint8_t*)ei_aligned_malloc(16, EI_CLASSIFIER_TFLITE_ARENA_SIZE);
     if (tensor_arena == NULL) {
-        ei_printf("Failed to allocate TFLite arena (%d bytes)\r\n", EI_CLASSIFIER_TFLITE_ARENA_SIZE);
+        ei_printf("Failed to allocate TFLite arena (%d bytes)\n", EI_CLASSIFIER_TFLITE_ARENA_SIZE);
         return EI_IMPULSE_TFLITE_ARENA_ALLOC_FAILED;
     }
     *micro_tensor_arena = tensor_arena;
@@ -573,7 +584,7 @@ static EI_IMPULSE_ERROR inference_tflite_run(uint64_t ctx_start_ms,
     // Run inference, and report any error
     TfLiteStatus invoke_status = interpreter->Invoke();
     if (invoke_status != kTfLiteOk) {
-        error_reporter->Report("Invoke failed (%d)\r\n", invoke_status);
+        error_reporter->Report("Invoke failed (%d)\n", invoke_status);
         ei_aligned_free(tensor_arena);
         return EI_IMPULSE_TFLITE_ERROR;
     }
@@ -586,7 +597,7 @@ static EI_IMPULSE_ERROR inference_tflite_run(uint64_t ctx_start_ms,
 
     // Read the predicted y value from the model's output tensor
     if (debug) {
-        ei_printf("Predictions (time: %d ms.):\r\n", result->timing.classification);
+        ei_printf("Predictions (time: %d ms.):\n", result->timing.classification);
     }
 #if EI_CLASSIFIER_OBJECT_DETECTION == 1
     fill_result_struct_f32(result, tflite::post_process_boxes, tflite::post_process_scores, tflite::post_process_classes, debug);
@@ -714,7 +725,7 @@ extern "C" EI_IMPULSE_ERROR run_inference(
         if (!model) {
             model = tflite::FlatBufferModel::BuildFromBuffer((const char*)trained_tflite, trained_tflite_len);
             if (!model) {
-                ei_printf("Failed to build TFLite model from buffer\r\n");
+                ei_printf("Failed to build TFLite model from buffer\n");
                 return EI_IMPULSE_TFLITE_ERROR;
             }
 
@@ -723,12 +734,12 @@ extern "C" EI_IMPULSE_ERROR run_inference(
             builder(&interpreter);
 
             if (!interpreter) {
-                ei_printf("Failed to construct interpreter\r\n");
+                ei_printf("Failed to construct interpreter\n");
                 return EI_IMPULSE_TFLITE_ERROR;
             }
 
             if (interpreter->AllocateTensors() != kTfLiteOk) {
-                ei_printf("AllocateTensors failed\r\n");
+                ei_printf("AllocateTensors failed\n");
                 return EI_IMPULSE_TFLITE_ERROR;
             }
         }
@@ -783,7 +794,7 @@ extern "C" EI_IMPULSE_ERROR run_inference(
         }
 
         if (debug) {
-            ei_printf("Predictions (time: %d ms.):\r\n", result->timing.classification);
+            ei_printf("Predictions (time: %d ms.):\n", result->timing.classification);
         }
 
 #if EI_CLASSIFIER_OBJECT_DETECTION == 1
@@ -839,7 +850,7 @@ extern "C" EI_IMPULSE_ERROR run_inference(
             if (debug) {
                 ei_printf("%s:\t", ei_classifier_inferencing_categories[ix]);
                 ei_printf_float(value);
-                ei_printf("\r\n");
+                ei_printf("\n");
             }
             result->classification[ix].label = ei_classifier_inferencing_categories[ix];
             result->classification[ix].value = value;
@@ -864,17 +875,17 @@ extern "C" EI_IMPULSE_ERROR run_inference(
 
             FILE *file = fopen(model_file_name, "w");
             if (!file) {
-                ei_printf("ERR: TensorRT init failed to open '%s'\r\n", model_file_name);
+                ei_printf("ERR: TensorRT init failed to open '%s'\n", model_file_name);
                 return EI_IMPULSE_TENSORRT_INIT_FAILED;
             }
 
             if (fwrite(trained_onnx, trained_onnx_len, 1, file) != 1) {
-                ei_printf("ERR: TensorRT init fwrite failed\r\n");
+                ei_printf("ERR: TensorRT init fwrite failed\n");
                 return EI_IMPULSE_TENSORRT_INIT_FAILED;
             }
 
             if (fclose(file) != 0) {
-                ei_printf("ERR: TensorRT init fclose failed\r\n");
+                ei_printf("ERR: TensorRT init fclose failed\n");
                 return EI_IMPULSE_TENSORRT_INIT_FAILED;
             }
         }
@@ -918,7 +929,7 @@ extern "C" EI_IMPULSE_ERROR run_inference(
         if (debug) {
             ei_printf("Anomaly score (time: %d ms.): ", static_cast<int>(anomaly_end_ms - anomaly_start_ms));
             ei_printf_float(anomaly);
-            ei_printf("\r\n");
+            ei_printf("\n");
         }
 
         result->timing.anomaly = anomaly_end_ms - anomaly_start_ms;
@@ -997,7 +1008,7 @@ extern "C" EI_IMPULSE_ERROR run_inference_i16(
 
 #elif EI_CLASSIFIER_INFERENCING_ENGINE == EI_CLASSIFIER_TFLITE_FULL
 
-    ei_printf("ERR: run_classifier_i16 is not supported with full TensorFlow Lite\r\n");
+    ei_printf("ERR: run_classifier_i16 is not supported with full TensorFlow Lite\n");
     return EI_IMPULSE_TFLITE_ERROR;
 
 #endif
@@ -1023,7 +1034,7 @@ extern "C" EI_IMPULSE_ERROR run_inference_i16(
         if (debug) {
             ei_printf("Anomaly score (time: %d ms.): ", static_cast<int>(anomaly_end_ms - anomaly_start_ms));
             ei_printf_float(anomaly);
-            ei_printf("\r\n");
+            ei_printf("\n");
         }
 
         result->timing.anomaly = anomaly_end_ms - anomaly_start_ms;
@@ -1069,7 +1080,7 @@ extern "C" EI_IMPULSE_ERROR run_classifier(
     //         printf("%.0f, ", buf[jx]);
     //     }
     // }
-    // printf("\r\n");
+    // printf("\n");
     // }
 
     memset(result, 0, sizeof(ei_impulse_result_t));
@@ -1084,15 +1095,25 @@ extern "C" EI_IMPULSE_ERROR run_classifier(
         ei_model_dsp_t block = ei_dsp_blocks[ix];
 
         if (out_features_index + block.n_output_features > EI_CLASSIFIER_NN_INPUT_FRAME_SIZE) {
-            ei_printf("ERR: Would write outside feature buffer\r\n");
+            ei_printf("ERR: Would write outside feature buffer\n");
             return EI_IMPULSE_DSP_ERROR;
         }
 
         ei::matrix_t fm(1, block.n_output_features, features_matrix.buffer + out_features_index);
 
+#if EIDSP_SIGNAL_C_FN_POINTER
+        if (block.axes_size != EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME) {
+            ei_printf("ERR: EIDSP_SIGNAL_C_FN_POINTER can only be used when all axes are selected for DSP blocks\n");
+            return EI_IMPULSE_DSP_ERROR;
+        }
         int ret = block.extract_fn(signal, &fm, block.config, EI_CLASSIFIER_FREQUENCY);
+#else
+        SignalWithAxes swa(signal, block.axes, block.axes_size);
+        int ret = block.extract_fn(swa.get_signal(), &fm, block.config, EI_CLASSIFIER_FREQUENCY);
+#endif
+
         if (ret != EIDSP_OK) {
-            ei_printf("ERR: Failed to run DSP process (%d)\r\n", ret);
+            ei_printf("ERR: Failed to run DSP process (%d)\n", ret);
             return EI_IMPULSE_DSP_ERROR;
         }
 
@@ -1111,12 +1132,12 @@ extern "C" EI_IMPULSE_ERROR run_classifier(
             ei_printf_float(features_matrix.buffer[ix]);
             ei_printf(" ");
         }
-        ei_printf("\r\n");
+        ei_printf("\n");
     }
 
 #if EI_CLASSIFIER_INFERENCING_ENGINE != EI_CLASSIFIER_NONE
     if (debug) {
-        ei_printf("Running neural network...\r\n");
+        ei_printf("Running neural network...\n");
     }
 #endif
 
@@ -1143,16 +1164,25 @@ extern "C" EI_IMPULSE_ERROR run_classifier_i16(
         ei_model_dsp_i16_t block = ei_dsp_blocks_i16[ix];
 
         if (out_features_index + block.n_output_features > EI_CLASSIFIER_NN_INPUT_FRAME_SIZE) {
-            ei_printf("ERR: Would write outside feature buffer\r\n");
+            ei_printf("ERR: Would write outside feature buffer\n");
             return EI_IMPULSE_DSP_ERROR;
         }
 
         ei::matrix_i32_t fm(1, block.n_output_features, features_matrix.buffer + out_features_index);
 
-        int ret = block.extract_fn(signal, &fm, ei_dsp_blocks[ix].config, EI_CLASSIFIER_FREQUENCY);
+#if EIDSP_SIGNAL_C_FN_POINTER
+        if (block.axes_size != EI_CLASSIFIER_RAW_SAMPLES_PER_FRAME) {
+            ei_printf("ERR: EIDSP_SIGNAL_C_FN_POINTER can only be used when all axes are selected for DSP blocks\n");
+            return EI_IMPULSE_DSP_ERROR;
+        }
+        int ret = block.extract_fn(signal, &fm, block.config, EI_CLASSIFIER_FREQUENCY);
+#else
+        SignalWithAxesI16 swa(signal, block.axes, block.axes_size);
+        int ret = block.extract_fn(swa.get_signal(), &fm, block.config, EI_CLASSIFIER_FREQUENCY);
+#endif
 
         if (ret != EIDSP_OK) {
-            ei_printf("ERR: Failed to run DSP process (%d)\r\n", ret);
+            ei_printf("ERR: Failed to run DSP process (%d)\n", ret);
             return EI_IMPULSE_DSP_ERROR;
         }
 
@@ -1171,12 +1201,12 @@ extern "C" EI_IMPULSE_ERROR run_classifier_i16(
             ei_printf_float((float)features_matrix.buffer[ix] / 32768.f);
             ei_printf(" ");
         }
-        ei_printf("\r\n");
+        ei_printf("\n");
     }
 
 #if EI_CLASSIFIER_INFERENCING_ENGINE != EI_CLASSIFIER_NONE
     if (debug) {
-        ei_printf("Running neural network...\r\n");
+        ei_printf("Running neural network...\n");
     }
 #endif
 
@@ -1201,7 +1231,7 @@ static void calc_cepstral_mean_and_var_normalization_mfcc(ei_matrix *matrix, voi
     // cepstral mean and variance normalization
     int ret = speechpy::processing::cmvnw(matrix, config->win_size, true, false);
     if (ret != EIDSP_OK) {
-        ei_printf("ERR: cmvnw failed (%d)\r\n", ret);
+        ei_printf("ERR: cmvnw failed (%d)\n", ret);
         return;
     }
 
@@ -1227,7 +1257,7 @@ static void calc_cepstral_mean_and_var_normalization_mfe(ei_matrix *matrix, void
     // cepstral mean and variance normalization
     int ret = speechpy::processing::cmvnw(matrix, config->win_size, false, true);
     if (ret != EIDSP_OK) {
-        ei_printf("ERR: cmvnw failed (%d)\r\n", ret);
+        ei_printf("ERR: cmvnw failed (%d)\n", ret);
         return;
     }
 
@@ -1252,7 +1282,7 @@ static void calc_cepstral_mean_and_var_normalization_spectrogram(ei_matrix *matr
 
     int ret = numpy::normalize(matrix);
     if (ret != EIDSP_OK) {
-        ei_printf("ERR: normalization failed (%d)\r\n", ret);
+        ei_printf("ERR: normalization failed (%d)\n", ret);
         return;
     }
 
@@ -1349,7 +1379,7 @@ extern "C" EI_IMPULSE_ERROR run_classifier_image_quantized(
     // run DSP process and quantize automatically
     int ret = extract_image_features_quantized(signal, &features_matrix, ei_dsp_blocks[0].config, EI_CLASSIFIER_FREQUENCY);
     if (ret != EIDSP_OK) {
-        ei_printf("ERR: Failed to run DSP process (%d)\r\n", ret);
+        ei_printf("ERR: Failed to run DSP process (%d)\n", ret);
         return EI_IMPULSE_DSP_ERROR;
     }
 
@@ -1365,7 +1395,7 @@ extern "C" EI_IMPULSE_ERROR run_classifier_image_quantized(
             ei_printf_float((features_matrix.buffer[ix] - EI_CLASSIFIER_TFLITE_INPUT_ZEROPOINT) * EI_CLASSIFIER_TFLITE_INPUT_SCALE);
             ei_printf(" ");
         }
-        ei_printf("\r\n");
+        ei_printf("\n");
     }
 
     ctx_start_ms = ei_read_timer_ms();
@@ -1452,7 +1482,7 @@ __attribute__((unused)) EI_IMPULSE_ERROR run_impulse(
     int err = numpy::signal_from_buffer(x, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
     if (err != 0) {
         free(x);
-        ei_printf("ERR: signal_from_buffer failed (%d)\r\n", err);
+        ei_printf("ERR: signal_from_buffer failed (%d)\n", err);
         return EI_IMPULSE_DSP_ERROR;
     }
 
@@ -1506,7 +1536,7 @@ __attribute__((unused)) EI_IMPULSE_ERROR run_impulse_i16(
     signal_i16_t signal;
     int err = numpy::signal_from_buffer_i16(x, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
     if (err != 0) {
-        ei_printf("ERR: signal_from_buffer failed (%d)\r\n", err);
+        ei_printf("ERR: signal_from_buffer failed (%d)\n", err);
         return EI_IMPULSE_DSP_ERROR;
     }
 
