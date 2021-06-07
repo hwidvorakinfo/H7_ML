@@ -30,8 +30,10 @@ typedef struct {
  } classifier_t;
 
 RETURN_STATUS classifier_config(void);
+RETURN_STATUS classifier_prepare(msg_t *msg);
 RETURN_STATUS classifier_set_state(classifier_state_t state);
 classifier_state_t classifier_get_state(void);
+uint32_t classifier_get_data_address(void);
 
 #ifdef __cplusplus
 }

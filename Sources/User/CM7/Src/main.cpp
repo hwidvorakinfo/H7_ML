@@ -95,29 +95,29 @@ static int get_signal_data(size_t offset, size_t length, float *out_ptr)
 	// idle simulation
 //	memset(&array, 0, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE);
 
-	// triangle
-	uint16_t i;
-	int16_t value = 0;
-	for (i = 0; i < length/4; i++)
-	{
-		array[i] = value;
-		value += 500;
-	}
-	for (i = length/4; i < length/2; i++)
-	{
-		array[i] = value;
-		value -= 500;
-	}
-	for (i = length/2; i < 3*length/4; i++)
-	{
-		array[i] = value;
-		value += 500;
-	}
-	for (i = 3*length/4; i < length; i++)
-	{
-		array[i] = value;
-		value -= 500;
-	}
+//	// triangle
+//	uint16_t i;
+//	int16_t value = 0;
+//	for (i = 0; i < length/4; i++)
+//	{
+//		array[i] = value;
+//		value += 500;
+//	}
+//	for (i = length/4; i < length/2; i++)
+//	{
+//		array[i] = value;
+//		value -= 500;
+//	}
+//	for (i = length/2; i < 3*length/4; i++)
+//	{
+//		array[i] = value;
+//		value += 500;
+//	}
+//	for (i = 3*length/4; i < length; i++)
+//	{
+//		array[i] = value;
+//		value -= 500;
+//	}
 
 //	// sinus
 //	uint16_t i;
@@ -134,7 +134,15 @@ static int get_signal_data(size_t offset, size_t length, float *out_ptr)
 //		index += 8;
 //	}
 
-	numpy::int16_to_float(array, out_ptr, length);
+//	numpy::int16_to_float(array, out_ptr, length);
+
+	int16_t *p_buffer = (int16_t *)classifier_get_data_address();
+	//numpy::int16_to_float(p_buffer, out_ptr, length);
+
+	for (size_t ix = 0; ix < length; ix++)
+	{
+		out_ptr[ix] = 10.0f * (float)(p_buffer[ix]) / 4096;
+	}
 
 	return 0;
 }
@@ -349,8 +357,19 @@ static void Thread_Classifier(void const *argument)
 
 			// Do classification (i.e. the inference part)
 			signal_t signal;
+
+			// int16_t
 			signal.total_length = EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE;
 			signal.get_data = &get_signal_data;
+
+			// float
+//			float *p_buffer = (float *)classifier_get_data_address();
+//			int err = numpy::signal_from_buffer(p_buffer, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, &signal);
+//			if (err != 0) {
+//				ei_printf("Failed to create signal from buffer (%d)\n", err);
+//				return;
+//			}
+
 			ei_impulse_result_t result = { 0 };
 			//EI_IMPULSE_ERROR r = run_classifier_continuous(&signal, &result, debug_nn);
 			EI_IMPULSE_ERROR r = run_classifier(&signal, &result, debug_nn);

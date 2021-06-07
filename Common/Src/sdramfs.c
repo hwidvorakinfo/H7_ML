@@ -147,6 +147,23 @@ RETURN_STATUS sdramfs_edit_file_header(dataacq_setup_t *header, uint32_t id)
 	return RETURN_ERROR;
 }
 
+// vlozi do alokacni tabulky informace ze vstupniho parametru
+// v polozce id struktury vstupniho parametru je identifikator daneho zaznamu
+uint32_t sdramfs_get_file_header_address(uint32_t id)
+{
+	uint8_t i;
+	sdramfs_file_t *p_file = (sdramfs_file_t *)SDRAMFS_ALLOCATION_TABLE_START;
+	for (i = 0; i < MAXNUMBEROFFILES; i++)
+	{
+		if (p_file[i].id == id)
+		{
+			// nasel jsi dany zaznam
+			return (uint32_t)&p_file[i];
+		}
+	}
+	return 0;
+}
+
 // vymaze zaznam s danym id
 RETURN_STATUS sdramfs_delete_file(uint32_t id)
 {

@@ -161,6 +161,7 @@ RETURN_STATUS mpu_gyro_tara(void)
 	uint8_t i;
 	volatile uint8_t num = 0;
 
+	// vynuluj offsety v senzoru
 	i2c_buffer[0] = MPU_GYRO_OFS_XH;
 	i2c_buffer[1] = 0;
 	i2c_buffer[2] = 0;
@@ -170,6 +171,7 @@ RETURN_STATUS mpu_gyro_tara(void)
 	i2c_buffer[6] = 0;
 	mikrobus_i2c_write(MPU9250I2CADDR, (uint8_t *)i2c_buffer, 7);
 
+	// prumeruj nactene hodnoty MPU_AVG_NUMBER-krat
 	for (i = 0; i < MPU_AVG_NUMBER; i++)
 	{
 		if (mpu_read_accgyro() == RETURN_OK)
@@ -180,10 +182,12 @@ RETURN_STATUS mpu_gyro_tara(void)
 			num++;
 		}
 	}
+	// prepocet offsetu na korekcni hodnotu
 	offsx /= (-4*num);
 	offsy /= (-4*num);
 	offsz /= (-4*num);
 
+	// zapis nove hodnoty do offsetu
 	i2c_buffer[0] = MPU_GYRO_OFS_XH;
 	i2c_buffer[1] = ((offsx >> 8) & 0xFF);
 	i2c_buffer[2] = (offsx & 0xFF);

@@ -17,6 +17,7 @@
 #include "sdramfs.h"
 #include "mpu-9250.h"
 #include "beasth7.h"
+#include "msg_types.h"
 
 static volatile dataacq_setup_t datacq;
 static volatile uint8_t buffer[TX1BUFFERSIZE];
@@ -24,6 +25,9 @@ static volatile uint16_t buffer_index;
 static uint8_t progressbar_id;
 static uint32_t linenumbers = 0;
 static uint8_t *datacq_serial_data = NULL;
+static sdramfs_record_t classifier_file_record;
+
+extern volatile struct rpmsg_endpoint rp_endpoint;
 
 RETURN_STATUS dacq_add_id_to_adc_columns(uint32_t id);
 RETURN_STATUS dacq_add_id_to_serial_columns(uint32_t id);
@@ -683,6 +687,299 @@ RETURN_STATUS dacq_csv(void)
 		p_ainputs += NUMBER_OF_ADC_CHANNELS;
 	}
 
+	return RETURN_OK;
+}
+
+RETURN_STATUS dacq_call_classifier(uint32_t lines, uint32_t offset)
+{
+	// podle velicin ve sloupcich vypisuje vsechny dane hodnoty
+	// id pro ADC data je nutne vycist ze zaznamu pro dany sloupec, pak podle nej adresu souboru z alokacni tabulky
+	// id pro serial data je nutne vycist ze zaznamu pro dany sloupec, pak podle nej adresu souboru z alokacni tabulky
+	uint32_t adc_id = 0;
+	uint32_t adc_base_address = 0;
+	uint32_t serial_id = 0;
+	uint32_t serial_base_address = 0;
+	uint8_t i;
+
+	// ukladani do noveho souboru
+	uint32_t size = (sizeof(float) * datacq.num_of_columns *lines);
+	if (sdramfs_allocate_new_file(size, (sdramfs_record_t *)&classifier_file_record) != RETURN_OK)
+	{
+		Error_Handler();
+	}
+	// ve file_record je nyni id souboru a adresa, kde soubor zacina
+
+	// edituj zaznam souboru pro data
+	if (sdramfs_edit_file_header((dataacq_setup_t *)&datacq, classifier_file_record.id) != RETURN_OK)
+	{
+		Error_Handler();
+	}
+	volatile int16_t *p_value = (int16_t *)classifier_file_record.address;
+
+	// najdi zacatek ADC souboru, pokud je pouzivan
+	if (dacq_number_of_adc_channels() != 0)
+	{
+		for (i = 0; i < MAX_NUM_OF_COLUMNS; i++)
+		{
+			if ((datacq.quantity_in_column[i] > AINFIRST) && (datacq.quantity_in_column[i] < AINLAST))
+			{
+				adc_id = datacq.file_for_column[i];
+				break;
+			}
+		}
+		// nastav adresu zacatku souboru a pripocti offset
+		adc_base_address = sdramfs_get_address_from_id(adc_id) + (offset * datacq.num_of_columns * sizeof(uint16_t));
+		if (adc_base_address == 0)
+		{
+			return RETURN_ERROR;
+		}
+	}
+	// najdi zacatek serial souboru, pokud je pouzivan
+	if (dacq_number_of_serial_channels() != 0)
+	{
+		for (i = 0; i < MAX_NUM_OF_COLUMNS; i++)
+		{
+			if ((datacq.quantity_in_column[i] > SERIALFIRST) && (datacq.quantity_in_column[i] < SERIALLAST))
+			{
+				serial_id = datacq.file_for_column[i];
+				break;
+			}
+		}
+		// nastav adresu zacatku souboru a pripocti offset
+		serial_base_address = sdramfs_get_address_from_id(serial_id) + (offset * datacq.num_of_columns * sizeof(uint16_t));
+		if (serial_base_address == 0)
+		{
+			return RETURN_ERROR;
+		}
+	}
+
+	volatile uint16_t *p_ainputs = (uint16_t *)adc_base_address;
+	volatile uint16_t *p_serials = (uint16_t *)serial_base_address;
+
+	volatile uint8_t column;
+	volatile int32_t number;
+	volatile float f_number;
+	volatile float f_timestamp = 0.0f;
+
+	// projdi pres vsechny radky
+	while (lines--)
+	{
+		// projdi pres vsechny sloupce
+		for (column = 0; column < datacq.num_of_columns; column++)
+		{
+			switch(datacq.quantity_in_column[column])
+			{
+				case AIN1:
+					number = *p_ainputs;
+					// prevod na fyzikalni rozmer
+					#ifdef ADCRES_16B
+					f_number = ADCRANGEV * number / 65536;
+					#endif // ADCRES_16B
+					#ifdef ADCRES_14B
+					f_number = ADCRANGEV * number / 16384;
+					#endif // ADCRES_14B
+					#ifdef ADCRES_12B
+					f_number = ADCRANGEV * number / 4096;
+					#endif // ADCRES_12B
+					#ifdef ADCRES_10B
+					f_number = ADCRANGEV * number / 1024;
+					#endif // ADCRES_10B
+				break;
+
+				case AIN2:
+					number = *(p_ainputs + 1);
+					// prevod na fyzikalni rozmer
+					#ifdef ADCRES_16B
+					f_number = ADCRANGEV * number / 65536;
+					#endif // ADCRES_16B
+					#ifdef ADCRES_14B
+					f_number = ADCRANGEV * number / 16384;
+					#endif // ADCRES_14B
+					#ifdef ADCRES_12B
+					f_number = ADCRANGEV * number / 4096;
+					#endif // ADCRES_12B
+					#ifdef ADCRES_10B
+					f_number = ADCRANGEV * number / 1024;
+					#endif // ADCRES_10B
+				break;
+
+				case AIN3:
+					number = *(p_ainputs + 2);
+					// prevod na fyzikalni rozmer
+					#ifdef ADCRES_16B
+					f_number = ADCRANGEV * number / 65536;
+					#endif // ADCRES_16B
+					#ifdef ADCRES_14B
+					f_number = ADCRANGEV * number / 16384;
+					#endif // ADCRES_14B
+					#ifdef ADCRES_12B
+					f_number = ADCRANGEV * number / 4096;
+					#endif // ADCRES_12B
+					#ifdef ADCRES_10B
+					f_number = ADCRANGEV * number / 1024;
+					#endif // ADCRES_10B
+				break;
+
+				case ACCX:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef ACC_RANGE_2G
+					f_number = number / 16384.0f;
+					#endif // ACC_RANGE_2G
+					#ifdef ACC_RANGE_4G
+					f_number = number / 8192.0f;
+					#endif // ACC_RANGE_4G
+					#ifdef ACC_RANGE_8G
+					f_number = number / 4096.0f;
+					#endif // ACC_RANGE_8G
+					#ifdef ACC_RANGE_16G
+					f_number = number / 2048.0f;
+					#endif // ACC_RANGE_16G
+					p_serials++;
+				break;
+
+				case ACCY:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef ACC_RANGE_2G
+					f_number = number / 16384.0f;
+					#endif // ACC_RANGE_2G
+					#ifdef ACC_RANGE_4G
+					f_number = number / 8192.0f;
+					#endif // ACC_RANGE_4G
+					#ifdef ACC_RANGE_8G
+					f_number = number / 4096.0f;
+					#endif // ACC_RANGE_8G
+					#ifdef ACC_RANGE_16G
+					f_number = number / 2048.0f;
+					#endif // ACC_RANGE_16G
+					p_serials++;
+				break;
+
+				case ACCZ:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef ACC_RANGE_2G
+					f_number = number / 16384.0f;
+					#endif // ACC_RANGE_2G
+					#ifdef ACC_RANGE_4G
+					f_number = number / 8192.0f;
+					#endif // ACC_RANGE_4G
+					#ifdef ACC_RANGE_8G
+					f_number = number / 4096.0f;
+					#endif // ACC_RANGE_8G
+					#ifdef ACC_RANGE_16G
+					f_number = number / 2048.0f;
+					#endif // ACC_RANGE_16G
+					p_serials++;
+				break;
+
+				case GYROX:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef GYRO_RANGE_250
+					f_number = number / 131.0f;
+					#endif // GYRO_RANGE_250
+					#ifdef GYRO_RANGE_500
+					f_number = number / 65.5f;
+					#endif // GYRO_RANGE_500
+					#ifdef GYRO_RANGE_1000
+					f_number = number / 32.8f;
+					#endif // GYRO_RANGE_1000
+					#ifdef GYRO_RANGE_2000
+					f_number = number / 16.4f;
+					#endif // GYRO_RANGE_2000
+					p_serials++;
+				break;
+
+				case GYROY:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef GYRO_RANGE_250
+					f_number = number / 131.0f;
+					#endif // GYRO_RANGE_250
+					#ifdef GYRO_RANGE_500
+					f_number = number / 65.5f;
+					#endif // GYRO_RANGE_500
+					#ifdef GYRO_RANGE_1000
+					f_number = number / 32.8f;
+					#endif // GYRO_RANGE_1000
+					#ifdef GYRO_RANGE_2000
+					f_number = number / 16.4f;
+					#endif // GYRO_RANGE_2000
+					p_serials++;
+				break;
+
+				case GYROZ:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					#ifdef GYRO_RANGE_250
+					f_number = number / 131.0f;
+					#endif // GYRO_RANGE_250
+					#ifdef GYRO_RANGE_500
+					f_number = number / 65.5f;
+					#endif // GYRO_RANGE_500
+					#ifdef GYRO_RANGE_1000
+					f_number = number / 32.8f;
+					#endif // GYRO_RANGE_1000
+					#ifdef GYRO_RANGE_2000
+					f_number = number / 16.4f;
+					#endif // GYRO_RANGE_2000
+					p_serials++;
+				break;
+
+				case MAGX:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					f_number = number * 0.15f;
+					p_serials++;
+				break;
+
+				case MAGY:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					f_number = number * 0.15f;
+					p_serials++;
+				break;
+
+				case MAGZ:
+					number = (int16_t)*p_serials;
+					// prevod na fyzikalni rozmer
+					f_number = number * 0.15f;
+					p_serials++;
+				break;
+
+				case TEMP:
+					number = (int16_t)*p_serials;
+					f_number = number * 1.0f;
+					p_serials++;
+				break;
+
+				case TIME:
+					f_timestamp += (1000.0f/datacq.freq);
+					f_number = f_timestamp;
+				break;
+
+				default:
+					number = 0;
+				break;
+			}
+			//*p_value = *(float *)&f_number;
+			*p_value = number;
+			p_value++;
+		}
+		p_ainputs += NUMBER_OF_ADC_CHANNELS;
+	}
+
+	// soubor je pripraveny ke zpracovani, posli OpenAMP zpravu s identifikatorem souboru a prikazem ke zpracovani dat
+	volatile msg_t message;
+	message.header.cmd = MSG_CLASS001_MSG;
+	message.header.length = sizeof(classifier_file_record);
+	memcpy((void *)&message.data, (uint8_t *)&classifier_file_record, sizeof(sdramfs_record_t));
+
+	OPENAMP_send((struct rpmsg_endpoint *)&rp_endpoint, (const void *)&message, sizeof(msg_header_t) + message.header.length);
+
+	// soubor je potreba vymazat po prijeti zpravy s vysledky classifieru
 	return RETURN_OK;
 }
 

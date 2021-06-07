@@ -57,9 +57,9 @@ typedef struct {
  	dataacq_serialsetup_t serialsetup;
 } dataacq_setup_t;
 
-#define ADCRES_16B					ADC_RESOLUTION_16B
+//#define ADCRES_16B					ADC_RESOLUTION_16B
 //define ADCRES_14B					ADC_RESOLUTION_14B
-//#define ADCRES_12B				ADC_RESOLUTION_12B
+#define ADCRES_12B					ADC_RESOLUTION_12B
 //#define ADCRES_10B				ADC_RESOLUTION_10B
 #define ADCRANGEV					3.3f
 

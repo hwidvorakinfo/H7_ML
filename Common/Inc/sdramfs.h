@@ -45,6 +45,7 @@ RETURN_STATUS sdramfs_allocate_new_file(uint32_t size, sdramfs_record_t *record)
 RETURN_STATUS sdramfs_edit_file_header(dataacq_setup_t *header, uint32_t id);
 RETURN_STATUS sdramfs_delete_file(uint32_t id);
 uint32_t sdramfs_get_address_from_id(uint32_t id);
+uint32_t sdramfs_get_file_header_address(uint32_t id);
 
 #ifdef __cplusplus
 }

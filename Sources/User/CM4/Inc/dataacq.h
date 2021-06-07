@@ -30,6 +30,7 @@ RETURN_STATUS daqc_set_colfunc(uint8_t index, void *p_func);
 RETURN_STATUS daqc_set_colnum(uint8_t num);
 RETURN_STATUS datacq_send_data(void);
 RETURN_STATUS dacq_csv(void);
+RETURN_STATUS dacq_call_classifier(uint32_t lines, uint32_t offset);
 RETURN_STATUS dacq_start_acq(void);
 RETURN_STATUS dacq_stop_acq(void);
 RETURN_STATUS dacq_set_colquantity(uint8_t column, dataacq_quantity_t quantity);

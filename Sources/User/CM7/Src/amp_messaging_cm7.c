@@ -130,6 +130,7 @@ RETURN_STATUS amp_message_decode(uint8_t index)
 		break;
 
 		case MSG_CLASS001_MSG:
+			classifier_prepare((msg_t *)&rx_message[index]);			// prevezmi informace z prichozi zpravy
 			classifier_set_state(ENABLED);
 		break;
 

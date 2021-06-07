@@ -89,7 +89,7 @@ RETURN_STATUS adc_dma_config(uint32_t file_address)
 	}
 
 	AdcHandle.Init.ClockPrescaler           = ADC_CLOCK_ASYNC_DIV2;            /* Asynchronous clock mode, input ADC clock divided by 2*/
-	AdcHandle.Init.Resolution               = ADCRES_16B;              		   /* x-bit resolution for converted data */
+	AdcHandle.Init.Resolution               = ADCRES_12B;              		   /* x-bit resolution for converted data */
 	AdcHandle.Init.ScanConvMode             = ENABLE;                          /* Sequencer disabled (ADC conversion on only 1 channel: channel set on rank 1) */
 	AdcHandle.Init.EOCSelection             = ADC_EOC_SINGLE_CONV;             /* EOC flag picked-up to indicate conversion end */
 	AdcHandle.Init.LowPowerAutoWait         = DISABLE;                         /* Auto-delayed conversion feature disabled */

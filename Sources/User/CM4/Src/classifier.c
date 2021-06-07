@@ -10,16 +10,15 @@
 #include "defs.h"
 #include "error_handler.h"
 #include "classifier.h"
+#include "dataacq.h"
+#include "model_metadata.h"
 
 extern volatile struct rpmsg_endpoint rp_endpoint;
 
 RETURN_STATUS class_send_enable(void)
 {
-	volatile msg_t message;
-
-	message.header.cmd = MSG_CLASS001_MSG;			// classifier enable
-	message.header.length = 0;
-	OPENAMP_send((struct rpmsg_endpoint *)&rp_endpoint, (const void *)&message, sizeof(msg_header_t) + message.header.length);
+	// zavolej classifier s odkazem na data
+	dacq_call_classifier(EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, 0);
 
 	return RETURN_OK;
 }
