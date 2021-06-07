@@ -457,201 +457,214 @@ RETURN_STATUS dacq_csv(void)
 			{
 				case AIN1:
 					number = *p_ainputs;
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef ADCRES_16B
-					f_number = ADCRANGEV * number / 65536;
 					#endif // ADCRES_16B
 					#ifdef ADCRES_14B
-					f_number = ADCRANGEV * number / 16384;
+					number = number << 2;
 					#endif // ADCRES_14B
 					#ifdef ADCRES_12B
-					f_number = ADCRANGEV * number / 4096;
+					number = number << 4;
 					#endif // ADCRES_12B
 					#ifdef ADCRES_10B
-					f_number = ADCRANGEV * number / 1024;
+					number = number << 6;
 					#endif // ADCRES_10B
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.3f");
+					f_number = ADCRANGEV * number / 65536;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.4f");
 				break;
 
 				case AIN2:
 					number = *(p_ainputs + 1);
-					// prevod na fyzikalni rozmer
 					#ifdef ADCRES_16B
-					f_number = ADCRANGEV * number / 65536;
 					#endif // ADCRES_16B
 					#ifdef ADCRES_14B
-					f_number = ADCRANGEV * number / 16384;
+					number = number << 2;
 					#endif // ADCRES_14B
 					#ifdef ADCRES_12B
-					f_number = ADCRANGEV * number / 4096;
+					number = number << 4;
 					#endif // ADCRES_12B
 					#ifdef ADCRES_10B
-					f_number = ADCRANGEV * number / 1024;
+					number = number << 6;
 					#endif // ADCRES_10B
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.3f");
+					f_number = ADCRANGEV * number / 65536;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.4f");
 				break;
 
 				case AIN3:
 					number = *(p_ainputs + 2);
-					// prevod na fyzikalni rozmer
 					#ifdef ADCRES_16B
-					f_number = ADCRANGEV * number / 65536;
 					#endif // ADCRES_16B
 					#ifdef ADCRES_14B
-					f_number = ADCRANGEV * number / 16384;
+					number = number << 2;
 					#endif // ADCRES_14B
 					#ifdef ADCRES_12B
-					f_number = ADCRANGEV * number / 4096;
+					number = number << 4;
 					#endif // ADCRES_12B
 					#ifdef ADCRES_10B
-					f_number = ADCRANGEV * number / 1024;
+					number = number << 6;
 					#endif // ADCRES_10B
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.3f");
+					f_number = ADCRANGEV * number / 65536;
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%5.4f");
 				break;
 
 				case ACCX:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					#ifdef ACC_RANGE_2G
-					f_number = number / 16384.0f;
-					#endif // ACC_RANGE_2G
-					#ifdef ACC_RANGE_4G
-					f_number = number / 8192.0f;
-					#endif // ACC_RANGE_4G
-					#ifdef ACC_RANGE_8G
-					f_number = number / 4096.0f;
-					#endif // ACC_RANGE_8G
-					#ifdef ACC_RANGE_16G
-					f_number = number / 2048.0f;
-					#endif // ACC_RANGE_16G
+					// prevod na normalizovany rozmer
+//					#ifdef ACC_RANGE_2G
+//					f_number = number / 32768.0f;
+//					#endif // ACC_RANGE_2G
+//					#ifdef ACC_RANGE_4G
+//					f_number = number / 8192.0f;
+//					#endif // ACC_RANGE_4G
+//					#ifdef ACC_RANGE_8G
+//					f_number = number / 4096.0f;
+//					#endif // ACC_RANGE_8G
+//					#ifdef ACC_RANGE_16G
+//					f_number = number / 2048.0f;
+//					#endif // ACC_RANGE_16G
+					f_number = number / 32768.0f;
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.5f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.6f");
 				break;
 
 				case ACCY:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					#ifdef ACC_RANGE_2G
-					f_number = number / 16384.0f;
-					#endif // ACC_RANGE_2G
-					#ifdef ACC_RANGE_4G
-					f_number = number / 8192.0f;
-					#endif // ACC_RANGE_4G
-					#ifdef ACC_RANGE_8G
-					f_number = number / 4096.0f;
-					#endif // ACC_RANGE_8G
-					#ifdef ACC_RANGE_16G
-					f_number = number / 2048.0f;
-					#endif // ACC_RANGE_16G
+					// prevod na normalizovany rozmer
+//					#ifdef ACC_RANGE_2G
+//					f_number = number / 32768.0f;
+//					#endif // ACC_RANGE_2G
+//					#ifdef ACC_RANGE_4G
+//					f_number = number / 8192.0f;
+//					#endif // ACC_RANGE_4G
+//					#ifdef ACC_RANGE_8G
+//					f_number = number / 4096.0f;
+//					#endif // ACC_RANGE_8G
+//					#ifdef ACC_RANGE_16G
+//					f_number = number / 2048.0f;
+//					#endif // ACC_RANGE_16G
+					f_number = number / 32768.0f;
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.5f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.6f");
 				break;
 
 				case ACCZ:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					#ifdef ACC_RANGE_2G
-					f_number = number / 16384.0f;
-					#endif // ACC_RANGE_2G
-					#ifdef ACC_RANGE_4G
-					f_number = number / 8192.0f;
-					#endif // ACC_RANGE_4G
-					#ifdef ACC_RANGE_8G
-					f_number = number / 4096.0f;
-					#endif // ACC_RANGE_8G
-					#ifdef ACC_RANGE_16G
-					f_number = number / 2048.0f;
-					#endif // ACC_RANGE_16G
+					// prevod na normalizovany rozmer
+//					#ifdef ACC_RANGE_2G
+//					f_number = number / 16384.0f;
+//					#endif // ACC_RANGE_2G
+//					#ifdef ACC_RANGE_4G
+//					f_number = number / 8192.0f;
+//					#endif // ACC_RANGE_4G
+//					#ifdef ACC_RANGE_8G
+//					f_number = number / 4096.0f;
+//					#endif // ACC_RANGE_8G
+//					#ifdef ACC_RANGE_16G
+//					f_number = number / 2048.0f;
+//					#endif // ACC_RANGE_16G
+					f_number = number / 32768.0f;
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.5f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%7.6f");
 				break;
 
 				case GYROX:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef GYRO_RANGE_250
-					f_number = number / 131.0f;
+					//f_number = number / 131.0f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_250
 					#ifdef GYRO_RANGE_500
-					f_number = number / 65.5f;
+					//f_number = number / 65.5f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_500
 					#ifdef GYRO_RANGE_1000
-					f_number = number / 32.8f;
+					//f_number = number / 32.8f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_1000
 					#ifdef GYRO_RANGE_2000
-					f_number = number / 16.4f;
+					//f_number = number / 16.4f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_2000
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.5f");
 				break;
 
 				case GYROY:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef GYRO_RANGE_250
-					f_number = number / 131.0f;
+					//f_number = number / 131.0f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_250
 					#ifdef GYRO_RANGE_500
-					f_number = number / 65.5f;
+					//f_number = number / 65.5f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_500
 					#ifdef GYRO_RANGE_1000
-					f_number = number / 32.8f;
+					//f_number = number / 32.8f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_1000
 					#ifdef GYRO_RANGE_2000
-					f_number = number / 16.4f;
+					//f_number = number / 16.4f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_2000
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.5f");
 				break;
 
 				case GYROZ:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef GYRO_RANGE_250
-					f_number = number / 131.0f;
+					//f_number = number / 131.0f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_250
 					#ifdef GYRO_RANGE_500
-					f_number = number / 65.5f;
+					//f_number = number / 65.5f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_500
 					#ifdef GYRO_RANGE_1000
-					f_number = number / 32.8f;
+					//f_number = number / 32.8f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_1000
 					#ifdef GYRO_RANGE_2000
-					f_number = number / 16.4f;
+					//f_number = number / 16.4f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_2000
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.5f");
 				break;
 
 				case MAGX:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					f_number = number * 0.15f;
+					// prevod na normalizovany rozmer
+					f_number = number * 0.15f / 4912;
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.5f");
 				break;
 
 				case MAGY:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					f_number = number * 0.15f;
+					// prevod na normalizovany rozmer
+					f_number = number * 0.15f / 4912;
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.5f");
 				break;
 
 				case MAGZ:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					f_number = number * 0.15f;
+					// prevod na normalizovany rozmer
+					f_number = number * 0.15f / 4912;
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.2f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%6.5f");
 				break;
 
 				case TEMP:
 					number = (int16_t)*p_serials;
-					f_number = number * 1.0f;
+					f_number = number * 1.0f / 32768;
 					p_serials++;
-					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%4.1f");
+					dacq_csv_set_format((uint8_t *)format, (uint8_t *)"%4.3f");
 				break;
 
 				case TIME:
@@ -715,6 +728,7 @@ RETURN_STATUS dacq_call_classifier(uint32_t lines, uint32_t offset)
 		Error_Handler();
 	}
 	volatile int16_t *p_value = (int16_t *)classifier_file_record.address;
+//	volatile float *p_value = (float *)classifier_file_record.address;
 
 	// najdi zacatek ADC souboru, pokud je pouzivan
 	if (dacq_number_of_adc_channels() != 0)
@@ -771,187 +785,202 @@ RETURN_STATUS dacq_call_classifier(uint32_t lines, uint32_t offset)
 			{
 				case AIN1:
 					number = *p_ainputs;
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef ADCRES_16B
-					f_number = ADCRANGEV * number / 65536;
 					#endif // ADCRES_16B
 					#ifdef ADCRES_14B
-					f_number = ADCRANGEV * number / 16384;
+					number = number << 2;
 					#endif // ADCRES_14B
 					#ifdef ADCRES_12B
-					f_number = ADCRANGEV * number / 4096;
+					number = number << 4;
 					#endif // ADCRES_12B
 					#ifdef ADCRES_10B
-					f_number = ADCRANGEV * number / 1024;
+					number = number << 6;
 					#endif // ADCRES_10B
+					f_number = ADCRANGEV * number / 65536;
 				break;
 
 				case AIN2:
 					number = *(p_ainputs + 1);
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef ADCRES_16B
-					f_number = ADCRANGEV * number / 65536;
 					#endif // ADCRES_16B
 					#ifdef ADCRES_14B
-					f_number = ADCRANGEV * number / 16384;
+					number = number << 2;
 					#endif // ADCRES_14B
 					#ifdef ADCRES_12B
-					f_number = ADCRANGEV * number / 4096;
+					number = number << 4;
 					#endif // ADCRES_12B
 					#ifdef ADCRES_10B
-					f_number = ADCRANGEV * number / 1024;
+					number = number << 6;
 					#endif // ADCRES_10B
+					f_number = ADCRANGEV * number / 65536;
 				break;
 
 				case AIN3:
 					number = *(p_ainputs + 2);
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef ADCRES_16B
-					f_number = ADCRANGEV * number / 65536;
 					#endif // ADCRES_16B
 					#ifdef ADCRES_14B
-					f_number = ADCRANGEV * number / 16384;
+					number = number << 2;
 					#endif // ADCRES_14B
 					#ifdef ADCRES_12B
-					f_number = ADCRANGEV * number / 4096;
+					number = number << 4;
 					#endif // ADCRES_12B
 					#ifdef ADCRES_10B
-					f_number = ADCRANGEV * number / 1024;
+					number = number << 6;
 					#endif // ADCRES_10B
+					f_number = ADCRANGEV * number / 65536;
 				break;
 
 				case ACCX:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					#ifdef ACC_RANGE_2G
-					f_number = number / 16384.0f;
-					#endif // ACC_RANGE_2G
-					#ifdef ACC_RANGE_4G
-					f_number = number / 8192.0f;
-					#endif // ACC_RANGE_4G
-					#ifdef ACC_RANGE_8G
-					f_number = number / 4096.0f;
-					#endif // ACC_RANGE_8G
-					#ifdef ACC_RANGE_16G
-					f_number = number / 2048.0f;
-					#endif // ACC_RANGE_16G
+					// prevod na normalizovany rozmer
+//					#ifdef ACC_RANGE_2G
+//					f_number = number / 16384.0f;
+//					#endif // ACC_RANGE_2G
+//					#ifdef ACC_RANGE_4G
+//					f_number = number / 8192.0f;
+//					#endif // ACC_RANGE_4G
+//					#ifdef ACC_RANGE_8G
+//					f_number = number / 4096.0f;
+//					#endif // ACC_RANGE_8G
+//					#ifdef ACC_RANGE_16G
+//					f_number = number / 2048.0f;
+//					#endif // ACC_RANGE_16G
+					f_number = number / 32768.0f;
 					p_serials++;
 				break;
 
 				case ACCY:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					#ifdef ACC_RANGE_2G
-					f_number = number / 16384.0f;
-					#endif // ACC_RANGE_2G
-					#ifdef ACC_RANGE_4G
-					f_number = number / 8192.0f;
-					#endif // ACC_RANGE_4G
-					#ifdef ACC_RANGE_8G
-					f_number = number / 4096.0f;
-					#endif // ACC_RANGE_8G
-					#ifdef ACC_RANGE_16G
-					f_number = number / 2048.0f;
-					#endif // ACC_RANGE_16G
+					// prevod na normalizovany rozmer
+//					#ifdef ACC_RANGE_2G
+//					f_number = number / 16384.0f;
+//					#endif // ACC_RANGE_2G
+//					#ifdef ACC_RANGE_4G
+//					f_number = number / 8192.0f;
+//					#endif // ACC_RANGE_4G
+//					#ifdef ACC_RANGE_8G
+//					f_number = number / 4096.0f;
+//					#endif // ACC_RANGE_8G
+//					#ifdef ACC_RANGE_16G
+//					f_number = number / 2048.0f;
+//					#endif // ACC_RANGE_16G
+					f_number = number / 32768.0f;
 					p_serials++;
 				break;
 
 				case ACCZ:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					#ifdef ACC_RANGE_2G
-					f_number = number / 16384.0f;
-					#endif // ACC_RANGE_2G
-					#ifdef ACC_RANGE_4G
-					f_number = number / 8192.0f;
-					#endif // ACC_RANGE_4G
-					#ifdef ACC_RANGE_8G
-					f_number = number / 4096.0f;
-					#endif // ACC_RANGE_8G
-					#ifdef ACC_RANGE_16G
-					f_number = number / 2048.0f;
-					#endif // ACC_RANGE_16G
+					// prevod na normalizovany rozmer
+//					#ifdef ACC_RANGE_2G
+//					f_number = number / 16384.0f;
+//					#endif // ACC_RANGE_2G
+//					#ifdef ACC_RANGE_4G
+//					f_number = number / 8192.0f;
+//					#endif // ACC_RANGE_4G
+//					#ifdef ACC_RANGE_8G
+//					f_number = number / 4096.0f;
+//					#endif // ACC_RANGE_8G
+//					#ifdef ACC_RANGE_16G
+//					f_number = number / 2048.0f;
+//					#endif // ACC_RANGE_16G
+					f_number = number / 32768.0f;
 					p_serials++;
 				break;
 
 				case GYROX:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef GYRO_RANGE_250
-					f_number = number / 131.0f;
+					//f_number = number / 131.0f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_250
 					#ifdef GYRO_RANGE_500
-					f_number = number / 65.5f;
+					//f_number = number / 65.5f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_500
 					#ifdef GYRO_RANGE_1000
-					f_number = number / 32.8f;
+					//f_number = number / 32.8f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_1000
 					#ifdef GYRO_RANGE_2000
-					f_number = number / 16.4f;
+					//f_number = number / 16.4f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_2000
 					p_serials++;
 				break;
 
 				case GYROY:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef GYRO_RANGE_250
-					f_number = number / 131.0f;
+					//f_number = number / 131.0f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_250
 					#ifdef GYRO_RANGE_500
-					f_number = number / 65.5f;
+					//f_number = number / 65.5f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_500
 					#ifdef GYRO_RANGE_1000
-					f_number = number / 32.8f;
+					//f_number = number / 32.8f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_1000
 					#ifdef GYRO_RANGE_2000
-					f_number = number / 16.4f;
+					//f_number = number / 16.4f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_2000
 					p_serials++;
 				break;
 
 				case GYROZ:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
+					// prevod na normalizovany rozmer
 					#ifdef GYRO_RANGE_250
-					f_number = number / 131.0f;
+					//f_number = number / 131.0f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_250
 					#ifdef GYRO_RANGE_500
-					f_number = number / 65.5f;
+					//f_number = number / 65.5f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_500
 					#ifdef GYRO_RANGE_1000
-					f_number = number / 32.8f;
+					//f_number = number / 32.8f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_1000
 					#ifdef GYRO_RANGE_2000
-					f_number = number / 16.4f;
+					//f_number = number / 16.4f;
+					f_number = number / 32768.0f;
 					#endif // GYRO_RANGE_2000
 					p_serials++;
 				break;
 
 				case MAGX:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					f_number = number * 0.15f;
+					// prevod na normalizovany rozmer
+					f_number = number * 0.15f / 4912;
 					p_serials++;
 				break;
 
 				case MAGY:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					f_number = number * 0.15f;
+					// prevod na normalizovany rozmer
+					f_number = number * 0.15f / 4912;
 					p_serials++;
 				break;
 
 				case MAGZ:
 					number = (int16_t)*p_serials;
-					// prevod na fyzikalni rozmer
-					f_number = number * 0.15f;
+					// prevod na normalizovany rozmer
+					f_number = number * 0.15f / 4912;
 					p_serials++;
 				break;
 
 				case TEMP:
 					number = (int16_t)*p_serials;
-					f_number = number * 1.0f;
+					f_number = number * 1.0f / 32768;
 					p_serials++;
 				break;
 
@@ -964,8 +993,8 @@ RETURN_STATUS dacq_call_classifier(uint32_t lines, uint32_t offset)
 					number = 0;
 				break;
 			}
-			//*p_value = *(float *)&f_number;
-			*p_value = number;
+//			*p_value = f_number;	// float
+			*p_value = number;		// i16
 			p_value++;
 		}
 		p_ainputs += NUMBER_OF_ADC_CHANNELS;

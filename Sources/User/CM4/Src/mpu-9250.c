@@ -182,7 +182,7 @@ RETURN_STATUS mpu_gyro_tara(void)
 			num++;
 		}
 	}
-	// prepocet offsetu na korekcni hodnotu
+	// prepocet offsetu na korekcni ho/dnotu
 	offsx /= (-4*num);
 	offsy /= (-4*num);
 	offsz /= (-4*num);

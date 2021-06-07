@@ -136,13 +136,10 @@ static int get_signal_data(size_t offset, size_t length, float *out_ptr)
 
 //	numpy::int16_to_float(array, out_ptr, length);
 
-	int16_t *p_buffer = (int16_t *)classifier_get_data_address();
-	//numpy::int16_to_float(p_buffer, out_ptr, length);
 
-	for (size_t ix = 0; ix < length; ix++)
-	{
-		out_ptr[ix] = 10.0f * (float)(p_buffer[ix]) / 4096;
-	}
+	// prevod dat v souboru v SDRAM na float v SRAM
+	int16_t *p_buffer = (int16_t *)classifier_get_data_address();
+	numpy::int16_to_float(p_buffer, out_ptr, length);
 
 	return 0;
 }

@@ -61,7 +61,7 @@ typedef struct {
 //define ADCRES_14B					ADC_RESOLUTION_14B
 #define ADCRES_12B					ADC_RESOLUTION_12B
 //#define ADCRES_10B				ADC_RESOLUTION_10B
-#define ADCRANGEV					3.3f
+#define ADCRANGEV					1.0f
 
 #define ACC_RANGE_2G
 //#define ACC_RANGE_4G
