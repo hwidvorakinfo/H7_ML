@@ -391,6 +391,9 @@ static void Thread_Classifier(void const *argument)
 			// ukonceni a vysledky
 			classifier_set_state(STOPPED);
 
+			// cista doba behu classifieru
+			result.timing.classification = time;
+
 //			for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
 //			{
 //				ei_printf("    %s: %.5f\r\n", result.classification[ix].label, result.classification[ix].value);

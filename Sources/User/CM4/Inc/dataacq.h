@@ -55,7 +55,9 @@ RETURN_STATUS dacq_read_serial_channels(void);
 RETURN_STATUS dacq_logging_finished_message(void);
 RETURN_STATUS dacq_stop_logging(void);
 RETURN_STATUS dacq_acquisition_ready(void);
-
+RETURN_STATUS dacq_set_progressbar_state(uint8_t state);
+uint8_t dacq_get_progressbar_state(void);
+RETURN_STATUS dacq_set_taskid(uint8_t task);
 
 #ifdef __cplusplus
 }

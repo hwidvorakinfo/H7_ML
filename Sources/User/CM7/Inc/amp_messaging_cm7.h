@@ -15,7 +15,7 @@
 #include "stm32h7xx_hal.h"
 #include "defs.h"
 
-#define AMP_RX_MESSAGE_BUFFER_LEN					50
+#define AMP_RX_MESSAGE_BUFFER_LEN					30
 
 void new_service_cb(struct rpmsg_device *rdev, const char *name, uint32_t dest);
 void amp_set_status(AMP_MESSAGING_STATUS status);

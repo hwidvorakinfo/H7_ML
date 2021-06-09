@@ -67,9 +67,13 @@ RETURN_STATUS class_start(void)
 			// chyba pri zalozeni service
 			return RETURN_ERROR;
 		}
+		return RETURN_OK;
 	}
-
-	return RETURN_OK;
+	else
+	{
+		// malo dat
+		return RETURN_ERROR;
+	}
 }
 
 RETURN_STATUS class_stop(void)
@@ -124,6 +128,10 @@ RETURN_STATUS class_automat(void)
 			// priprava na dalsi beh
 			auto_classifier.state = AUTO_STARTED;
 		break;
+
+		default:
+
+		break;
 	}
 
 	return RETURN_OK;
@@ -151,18 +159,33 @@ RETURN_STATUS class_send_enable(void)
 
 RETURN_STATUS class_received_finished(uint8_t *data, uint16_t len)
 {
-	auto_classifier.state = AUTO_CLASSIFIED;
-
-	ei_impulse_result_t *p_result = (ei_impulse_result_t *)data;
-
-	// vypis vysledku
-	myprintf("\r\nResults:\r\n");
-	for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
+	if (auto_classifier.enabled == TRUE)
 	{
-		myprintf("    %s: %.5f\r\n", p_result->classification[ix].label, p_result->classification[ix].value);
+		auto_classifier.state = AUTO_CLASSIFIED;
+		ei_impulse_result_t *p_result = (ei_impulse_result_t *)data;
+
+		// vypis vysledku
+		myprintf("\r\nResults:\r\n");
+		for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
+		{
+			myprintf("    %s: %.5f\r\n", p_result->classification[ix].label, p_result->classification[ix].value);
+		}
+		myprintf("    %s: %.5f\r\n", "anomaly", p_result->anomaly);
+		myprintf("    %s: %d ms\r\n", "time", p_result->timing.classification);
 	}
-	myprintf("    %s: %.5f\r\n", "anomaly", p_result->anomaly);
-//	printf("    %s: %d ms\r\n", "time", time);
 
 	return RETURN_OK;
 }
+
+RETURN_STATUS class_data_length_ok(uint16_t freq, uint16_t period)
+{
+	if ((period * freq / 1000) >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE)
+	{
+		return RETURN_OK;
+	}
+	else
+	{
+		return RETURN_ERROR;
+	}
+}
+

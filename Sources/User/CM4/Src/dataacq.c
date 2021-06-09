@@ -27,6 +27,7 @@ static uint8_t progressbar_id;
 static uint32_t linenumbers = 0;
 static uint8_t *datacq_serial_data = NULL;
 static sdramfs_record_t classifier_file_record;
+static uint8_t progress_bar_state = 0;
 
 extern volatile struct rpmsg_endpoint rp_endpoint;
 
@@ -102,6 +103,7 @@ RETURN_STATUS dacq_start_acq(void)
 	if (datacq.taskid != 0)
 	{
 		Scheduler_Delete_Task(datacq.taskid);
+		datacq.taskid = 0;
 	}
 
 	sdramfs_record_t adc_record;						// zaznam pro soubor k ulozeni ADC dat
@@ -228,6 +230,7 @@ RETURN_STATUS dacq_stop_acq(void)
 	if (datacq.taskid != 0)
 	{
 		Scheduler_Delete_Task(datacq.taskid);
+		datacq.taskid = 0;
 	}
 
 	if (class_get_state() == AUTO_STOPPED)
@@ -1250,6 +1253,9 @@ RETURN_STATUS dacq_cancel_progressbar(void)
 		Scheduler_Delete_Task(progressbar_id);
 		progressbar_id = 0;
 	}
+
+	progress_bar_state = 0;
+
 	return RETURN_OK;
 }
 
@@ -1318,7 +1324,8 @@ RETURN_STATUS dacq_csv_set_format(uint8_t *frmt, uint8_t *pattern)
 
 RETURN_STATUS dacq_acquisition_ready(void)
 {
-	if ((datacq.freq != 0) && (datacq.period != 0))
+	// automaticke spusteni je mozne, pokud je system nastaven na sber dostatecneho mnozstvi vzorku
+	if (class_data_length_ok(datacq.freq, datacq.period) == RETURN_OK)
 	{
 		return RETURN_OK;
 	}
@@ -1326,6 +1333,25 @@ RETURN_STATUS dacq_acquisition_ready(void)
 	{
 		return RETURN_ERROR;
 	}
+}
+
+RETURN_STATUS dacq_set_progressbar_state(uint8_t state)
+{
+	progress_bar_state = state;
+
+	return RETURN_OK;
+}
+
+uint8_t dacq_get_progressbar_state(void)
+{
+	return progress_bar_state;
+}
+
+RETURN_STATUS dacq_set_taskid(uint8_t task)
+{
+	datacq.taskid = task;
+
+	return RETURN_OK;
 }
 
 

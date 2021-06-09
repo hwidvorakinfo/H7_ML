@@ -119,6 +119,7 @@ void Reset_service(void)
 void Datacq_service(void)
 {
 	dacq_stop_logging();
+	dacq_set_taskid(0);
 
 	if (class_get_state() == AUTO_STOPPED)
 	{
@@ -135,7 +136,7 @@ void Datacq_service(void)
 // sluzba pro vypis progress baru
 void Progressbar_service(void)
 {
-	static uint8_t state = 0;
+	uint8_t state = dacq_get_progressbar_state();
 	uint8_t text[] = "\r[          ]";
 	uint8_t i;
 #define POS			2
@@ -155,6 +156,7 @@ void Progressbar_service(void)
 	{
 		state = 0;
 	}
+	dacq_set_progressbar_state(state);
 #undef POS
 }
 

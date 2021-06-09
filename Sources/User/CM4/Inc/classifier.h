@@ -43,6 +43,7 @@ RETURN_STATUS class_automat(void);
 RETURN_STATUS class_set_state(classifier_automat_states_t state);
 classifier_automat_states_t class_get_state(void);
 RETURN_STATUS class_received_finished(uint8_t *data, uint16_t len);
+RETURN_STATUS class_data_length_ok(uint16_t freq, uint16_t period);
 
 
 #ifdef __cplusplus
