@@ -19,6 +19,7 @@
 #include "dataacq.h"
 #include "mikrobus.h"
 #include "beasth7.h"
+#include "classifier.h"
 
 /* private prototypes */
 
@@ -73,6 +74,10 @@ void Receive_service(void)
 				uart1_send_message((uint8_t *)rx_message[index].data, rx_message[index].header.length);
 			break;
 
+			case MSG_CLASS002_MSG:
+				class_received_finished((uint8_t *)rx_message[index].data, rx_message[index].header.length);
+			break;
+
 			default:
 			break;
 		}
@@ -115,8 +120,16 @@ void Datacq_service(void)
 {
 	dacq_stop_logging();
 
-	// vypis zaverecnou zpravu
-	dacq_logging_finished_message();
+	if (class_get_state() == AUTO_STOPPED)
+	{
+		// vypis zaverecnou zpravu
+		dacq_logging_finished_message();
+	}
+	else
+	{
+		// uspesne ulozeno, nastav stav AUTO_STORED
+		class_set_state(AUTO_STORED);
+	}
 }
 
 // sluzba pro vypis progress baru
@@ -143,4 +156,9 @@ void Progressbar_service(void)
 		state = 0;
 	}
 #undef POS
+}
+
+void Autoclass_service(void)
+{
+	class_automat();
 }

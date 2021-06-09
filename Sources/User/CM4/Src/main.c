@@ -30,6 +30,7 @@
 #include "dataacq.h"
 #include "mikrobus.h"
 #include "amp_messaging_cm4.h"
+#include "classifier.h"
 
 /** @addtogroup STM32H7xx_HAL_Examples
   * @{
@@ -87,6 +88,11 @@ int main(void)
 	}
 
 	if (mikrobus_init() != RETURN_OK)											// inicializace mikrobus systemu
+	{
+		Error_Handler();
+	}
+
+	if (class_init() != RETURN_OK)												// inicializace obsluhy classifieru
 	{
 		Error_Handler();
 	}

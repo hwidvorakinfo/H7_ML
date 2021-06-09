@@ -54,6 +54,7 @@ RETURN_STATUS dacq_increment_line_numbers(void);
 RETURN_STATUS dacq_read_serial_channels(void);
 RETURN_STATUS dacq_logging_finished_message(void);
 RETURN_STATUS dacq_stop_logging(void);
+RETURN_STATUS dacq_acquisition_ready(void);
 
 
 #ifdef __cplusplus

@@ -48,6 +48,9 @@ static command_t cmd_del = {(uint8_t *)&COMMAND_DELALL, &cmd_delall, TRUE};			//
 static const uint8_t COMMAND_CLASSEN[] = "CLASSEN";
 static command_t cmd_cl_en = {(uint8_t *)&COMMAND_DELALL, &cmd_classen, TRUE};		// spusteni clasiffieru
 
+static const uint8_t COMMAND_AUTO[] = "AUTO";
+static command_t cmd_cl_auto = {(uint8_t *)&COMMAND_AUTO, &cmd_auto, TRUE};			// spusteni automatickeho clasiffieru
+
 
 
 
@@ -163,6 +166,17 @@ void commands_process(void)
 		{
 			// zavolani obsluzne funkce prikazu
 			p_func = cmd_cl_en.p_itemfunc;
+			p_func(usart_get_rx_buffer());
+		}
+		return;
+	}
+	// parsing prikazu AUTO
+	else if (commands_parse((uint8_t *)&COMMAND_AUTO, usart_get_rx_buffer()) == COMMANDOK)
+	{
+		if (cmd_cl_auto.enabled)
+		{
+			// zavolani obsluzne funkce prikazu
+			p_func = cmd_cl_auto.p_itemfunc;
 			p_func(usart_get_rx_buffer());
 		}
 		return;
@@ -724,6 +738,30 @@ COMMAND_STATUS cmd_classen(void *p_i)
 CMD_RETURN command_classen(void *p_i)
 {
 	if (class_send_enable() == RETURN_OK)
+	{
+		commands_ok_cmd();
+		return RETURN_OK;
+	}
+	else
+	{
+		commands_wrong_cmd();
+		return RETURN_ERROR;
+	}
+}
+
+// prikaz AUTO
+COMMAND_STATUS cmd_auto(void *p_i)
+{
+	if (command_auto(p_i) == RETURN_ERROR)
+	{
+		return COMMANDWRONG;
+	}
+	return COMMANDOK;
+}
+
+CMD_RETURN command_auto(void *p_i)
+{
+	if (class_start() == RETURN_OK)
 	{
 		commands_ok_cmd();
 		return RETURN_OK;

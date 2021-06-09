@@ -79,6 +79,7 @@ void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle);
 void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *UartHandle, uint16_t Size);
 void usart_set_receive_mode(UART_HandleTypeDef *UartHandle);
 uint8_t *usart_get_rx_buffer(void);
+void myprintf(const char *format, ...);
 
 #ifdef __cplusplus
 }

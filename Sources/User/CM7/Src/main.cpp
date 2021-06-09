@@ -390,13 +390,17 @@ static void Thread_Classifier(void const *argument)
 
 			// ukonceni a vysledky
 			classifier_set_state(STOPPED);
-			for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
-			{
-				ei_printf("    %s: %.5f\r\n", result.classification[ix].label, result.classification[ix].value);
-			}
-			ei_printf("    %s: %.5f\r\n", "anomaly", result.anomaly);
-			ei_printf("    %s: %d ms\r\n", "time", time);
+
+//			for (size_t ix = 0; ix < EI_CLASSIFIER_LABEL_COUNT; ix++)
+//			{
+//				ei_printf("    %s: %.5f\r\n", result.classification[ix].label, result.classification[ix].value);
+//			}
+//			ei_printf("    %s: %.5f\r\n", "anomaly", result.anomaly);
+//			ei_printf("    %s: %d ms\r\n", "time", time);
 			HAL_GPIO_WritePin(LEDB_GPIO_PORT, LEDB_PIN, GPIO_PIN_SET);		// zhasni LEDB
+
+			// posli zpravu s vysledkem
+			amp_send_classifier_finished_message((uint8_t *)&result, sizeof(ei_impulse_result_t));
 		}
 		else
 		{

@@ -13,6 +13,8 @@
 #include "services.h"
 #include "mikrobus.h"
 
+void vprint(const char *fmt, va_list argp);
+
 UART_HandleTypeDef Uart1Handle;
 volatile usart_data_tx_t Tx1;
 volatile usart_data_rx_t Rx1;
@@ -360,4 +362,21 @@ void usart_set_receive_mode(UART_HandleTypeDef *UartHandle)
 uint8_t *usart_get_rx_buffer(void)
 {
 	return (uint8_t *)&Rx1_buffer;
+}
+
+void myprintf(const char *format, ...)
+{
+	va_list myargs;
+	va_start(myargs, format);
+	vprint(format, myargs);
+	va_end(myargs);
+}
+
+void vprint(const char *fmt, va_list argp)
+{
+	char string[TX1BUFFERSIZE];
+	if(0 < vsprintf(string, fmt, argp)) // build string
+	{
+		uart1_send_message(string, strlen(string));
+	}
 }

@@ -60,6 +60,15 @@ void amp_send_alive_message(void)
 
 }
 
+void amp_send_classifier_finished_message(uint8_t *data, uint16_t length)
+{
+	tx_message.header.cmd = MSG_CLASS002_MSG;
+	tx_message.header.length = length;
+	memcpy((void *)&tx_message.data, data, length);
+	OPENAMP_send(&rp_endpoint, (const void *)&tx_message, sizeof(msg_header_t) + tx_message.header.length);
+
+}
+
 void service_destroy_cb(struct rpmsg_endpoint *ept)
 {
   /* this function is called while remote endpoint as been destroyed, the

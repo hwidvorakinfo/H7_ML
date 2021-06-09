@@ -38,6 +38,7 @@ void Mikrobus_uart_decode_service(void);
 void Reset_service(void);
 void Datacq_service(void);
 void Progressbar_service(void);
+void Autoclass_service(void);
 
 #ifdef __cplusplus
 }

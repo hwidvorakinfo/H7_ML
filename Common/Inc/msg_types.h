@@ -15,7 +15,7 @@
 #include "stm32h7xx_hal.h"
 #include "defs.h"
 
-#define MSG_PAYLOAD_LENGTH				256
+#define MSG_PAYLOAD_LENGTH				128
 
 // typy zprav podle CMD
 #define MSG_COMM_BIND					0xA000
@@ -23,6 +23,7 @@
 #define MSG_LED_TOGGLE					0xB000
 #define MSG_UART_MSG					0xC000
 #define MSG_CLASS001_MSG				0xD000			// classifier enable
+#define MSG_CLASS002_MSG				0xD010			// classifier finished
 
 // status openamp messaging systemu
 typedef enum {

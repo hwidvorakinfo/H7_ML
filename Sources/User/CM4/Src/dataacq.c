@@ -18,6 +18,7 @@
 #include "mpu-9250.h"
 #include "beasth7.h"
 #include "msg_types.h"
+#include "classifier.h"
 
 static volatile dataacq_setup_t datacq;
 static volatile uint8_t buffer[TX1BUFFERSIZE];
@@ -229,8 +230,16 @@ RETURN_STATUS dacq_stop_acq(void)
 		Scheduler_Delete_Task(datacq.taskid);
 	}
 
-	// vypis zaverecnou zpravu
-	dacq_logging_finished_message();
+	if (class_get_state() == AUTO_STOPPED)
+	{
+		// autoclassifier nebezi
+		dacq_logging_finished_message();	// vypis zaverecnou zpravu
+	}
+	else
+	{
+		// autoclassifier bezi
+		class_stop();						// ukonci autoclassifier
+	}
 
 	return RETURN_OK;
 }
@@ -1306,4 +1315,17 @@ RETURN_STATUS dacq_csv_set_format(uint8_t *frmt, uint8_t *pattern)
 
 	return RETURN_OK;
 }
+
+RETURN_STATUS dacq_acquisition_ready(void)
+{
+	if ((datacq.freq != 0) && (datacq.period != 0))
+	{
+		return RETURN_OK;
+	}
+	else
+	{
+		return RETURN_ERROR;
+	}
+}
+
 
