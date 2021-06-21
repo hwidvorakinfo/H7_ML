@@ -121,16 +121,21 @@ void Datacq_service(void)
 	dacq_stop_logging();
 	dacq_set_taskid(0);
 
-	if (class_get_state() == AUTO_STOPPED)
-	{
-		// vypis zaverecnou zpravu
-		dacq_logging_finished_message();
-	}
-	else
-	{
-		// uspesne ulozeno, nastav stav AUTO_STORED
-		class_set_state(AUTO_STORED);
-	}
+	// vypis zaverecnou zpravu
+	dacq_logging_finished_message();
+}
+
+// sluzba pro spravu automatickeho ukladani dat
+void Datacq_auto_service(void)
+{
+	// vypis zpravu
+	dacq_logging_finished_message();
+
+	// zmena souboru pro ukladani
+	class_change_files();
+
+	// uspesne ulozeno, nastav stav AUTO_STORED
+	class_set_state(AUTO_STORED);
 }
 
 // sluzba pro vypis progress baru

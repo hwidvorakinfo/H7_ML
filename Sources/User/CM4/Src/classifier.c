@@ -47,26 +47,50 @@ RETURN_STATUS class_init(void)
 	auto_classifier.enabled = FALSE;
 	auto_classifier.state = AUTO_STOPPED;
 	auto_classifier.taskid = 0;
+	auto_classifier.files[AUTO_FILE_ADC_0].address = 0;
+	auto_classifier.files[AUTO_FILE_ADC_0].id = 0;
+	auto_classifier.files[AUTO_FILE_ADC_1].address = 0;
+	auto_classifier.files[AUTO_FILE_ADC_1].id = 0;
+	auto_classifier.files[AUTO_FILE_SERIAL_0].address = 0;
+	auto_classifier.files[AUTO_FILE_SERIAL_0].id = 0;
+	auto_classifier.files[AUTO_FILE_SERIAL_1].address = 0;
+	auto_classifier.files[AUTO_FILE_SERIAL_1].id = 0;
+	auto_classifier.file_active = 1;
+	auto_classifier.buffer_active = 0;
 
 	return RETURN_OK;
 }
 
 RETURN_STATUS class_start(void)
 {
+	// inicializuj automaticky classifier
+	class_init();
+
 	// odstartuj automat, pokud je to mozne
 	if (dacq_acquisition_ready() == RETURN_OK)
 	{
-		auto_classifier.enabled = TRUE;
-		auto_classifier.state = AUTO_STARTED;
+		// inicializace double-bufferingu
+		// zalozeni sluzby Datacq_auto_service
+		// odstartovani sync casovace
+		class_auto_init();
 
-		// zalozeni tasku pro obsluhu automatickeho classifieru
-		//uint32_t period = EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE * dacq_get_freq() + AUTO_CLASSIFIER_LEADTIME;
+		// zalozeni tasku pro obsluhu automatu classifieru
 		auto_classifier.taskid = Scheduler_Add_Task(Autoclass_service, 0, AUTO_CLASSIFIER_LEADTIME);
 		if (auto_classifier.taskid == SCH_MAX_TASKS)
 		{
 			// chyba pri zalozeni service
 			return RETURN_ERROR;
 		}
+
+		// zmen cile pro ukladani
+		// ukladani bezi volanim class_auto_init()
+		if (class_change_files() != RETURN_OK)
+		{
+			return RETURN_ERROR;
+		}
+
+		auto_classifier.state = AUTO_WAITING;
+
 		return RETURN_OK;
 	}
 	else
@@ -95,28 +119,16 @@ RETURN_STATUS class_automat(void)
 	switch (auto_classifier.state)
 	{
 		case AUTO_STOPPED:
-
+			//
 		break;
 
 		case AUTO_STARTED:
-			// pripraveno na start funkci DELALL
-			if (dacq_delall() == RETURN_OK)
-			{
-				auto_classifier.state = AUTO_ERASED;
-			}
-		break;
-
-		case AUTO_ERASED:
-			// pripraveno na start funkci START
-			if (dacq_start_acq() == RETURN_OK)
-			{
-				auto_classifier.state = AUTO_WAITING;
-			}
+			//
 		break;
 
 		case AUTO_STORED:
 			// pripraveno na predani funkci CLASSEN
-			class_send_enable();
+			dacq_call_classifier_auto((classifier_automat_t *)&auto_classifier, EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE, 0);
 			auto_classifier.state = AUTO_WAITING;
 		break;
 
@@ -126,7 +138,6 @@ RETURN_STATUS class_automat(void)
 
 		case AUTO_CLASSIFIED:
 			// priprava na dalsi beh
-			auto_classifier.state = AUTO_STARTED;
 		break;
 
 		default:
@@ -161,7 +172,7 @@ RETURN_STATUS class_received_finished(uint8_t *data, uint16_t len)
 {
 	if (auto_classifier.enabled == TRUE)
 	{
-		auto_classifier.state = AUTO_CLASSIFIED;
+		//auto_classifier.state = AUTO_CLASSIFIED;
 		ei_impulse_result_t *p_result = (ei_impulse_result_t *)data;
 
 		// vypis vysledku
@@ -179,7 +190,7 @@ RETURN_STATUS class_received_finished(uint8_t *data, uint16_t len)
 
 RETURN_STATUS class_data_length_ok(uint16_t freq, uint16_t period)
 {
-	if ((period * freq / 1000) >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE)
+	if (((period * freq) / 1000) >= EI_CLASSIFIER_DSP_INPUT_FRAME_SIZE)
 	{
 		return RETURN_OK;
 	}
@@ -189,3 +200,32 @@ RETURN_STATUS class_data_length_ok(uint16_t freq, uint16_t period)
 	}
 }
 
+RETURN_STATUS class_auto_init(void)
+{
+	// vymaz pamet
+	dacq_delall();
+
+	// zalozeni dvou souboru pro stridave ukladani metodou double-bufferingu
+	// odstartovani sluzby Datacq_auto_service
+	if (dacq_init_double_acq((classifier_automat_t *)&auto_classifier) != RETURN_OK)
+	{
+		return RETURN_ERROR;
+	}
+
+	return RETURN_OK;
+}
+
+RETURN_STATUS class_change_files(void)
+{
+	// zmen aktivni soubor pro dalsi beh
+	auto_classifier.file_active ^= 1;
+	auto_classifier.buffer_active ^= 1;
+
+	if (dacq_switch_double_acq((classifier_automat_t *)&auto_classifier) != RETURN_OK)
+	{
+		return RETURN_ERROR;
+	}
+	auto_classifier.enabled = TRUE;
+
+	return RETURN_OK;
+}

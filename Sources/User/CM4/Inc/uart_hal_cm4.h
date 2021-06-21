@@ -44,6 +44,9 @@ typedef struct {
 #define RX1BUFFERSIZE						128
 #define TX1BUFFERSIZE						128
 
+#define UART1_BAUDRATE_SLOW					115200
+#define UART1_BAUDRATE_FAST					921600
+
 #define USARTUSB                        	USART1
 #define USARTUSB_CLK_ENABLE()              __HAL_RCC_USART1_CLK_ENABLE()
 #define USARTUSB_RX_GPIO_CLK_ENABLE()      __HAL_RCC_GPIOA_CLK_ENABLE()
@@ -69,6 +72,7 @@ extern volatile usart_data_tx_t Tx2;
 extern volatile usart_data_rx_t Rx2;
 
 RETURN_STATUS uart_config(void);
+RETURN_STATUS uart_hello(void);
 RETURN_STATUS uart_unconfig(void);
 RETURN_STATUS uart1_send_message(uint8_t *text, uint16_t len);
 RETURN_STATUS uart1_new_line(void);
@@ -80,6 +84,7 @@ void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef *UartHandle, uint16_t Size);
 void usart_set_receive_mode(UART_HandleTypeDef *UartHandle);
 uint8_t *usart_get_rx_buffer(void);
 void myprintf(const char *format, ...);
+RETURN_STATUS usart_set_baudrate(uint32_t baudrate);
 
 #ifdef __cplusplus
 }

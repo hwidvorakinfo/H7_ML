@@ -290,7 +290,7 @@ void TIM_ADC_SYNC_IRQHandler(void)
   */
 void SPIMIKROE_IRQHandler(void)
 {
-  HAL_SPI_IRQHandler(&Spi1Handle);
+	HAL_SPI_IRQHandler(&Spi1Handle);
 }
 
 /**

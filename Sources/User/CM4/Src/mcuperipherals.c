@@ -31,9 +31,14 @@ void mcuperipherals_init(void)
 		Error_Handler();
 	}
 
+	// konfigurace UART
 	if (uart_config() != RETURN_OK)
 	{
 	    Error_Handler();
+	}
+	else
+	{
+		uart_hello();
 	}
 	//i2c_init();
 }

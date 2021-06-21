@@ -17,9 +17,10 @@
 #include "main.h"
 #include "application.h"
 #include "dataacq_types.h"
+#include "classifier.h"
 
 #define PROGRESSBARLENGTH						10
-#define PERIOD_OFFSET							10
+#define PERIOD_OFFSET							0
 
 uint32_t vspfunc(uint16_t index, char *frmt, ...);
 
@@ -58,6 +59,9 @@ RETURN_STATUS dacq_acquisition_ready(void);
 RETURN_STATUS dacq_set_progressbar_state(uint8_t state);
 uint8_t dacq_get_progressbar_state(void);
 RETURN_STATUS dacq_set_taskid(uint8_t task);
+RETURN_STATUS dacq_init_double_acq(classifier_automat_t *automat);
+RETURN_STATUS dacq_switch_double_acq(classifier_automat_t *automat);
+RETURN_STATUS dacq_call_classifier_auto(classifier_automat_t *automat, uint32_t lines, uint32_t offset);
 
 #ifdef __cplusplus
 }

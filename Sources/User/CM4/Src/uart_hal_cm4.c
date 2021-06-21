@@ -20,8 +20,7 @@ volatile usart_data_tx_t Tx1;
 volatile usart_data_rx_t Rx1;
 static volatile uint8_t Tx1_buffer[TX1BUFFERSIZE];
 static volatile uint8_t Rx1_buffer[RX1BUFFERSIZE];
-
-const uint8_t hello_message[] = "\n\r-= BeastH7! =-\r\n";
+static uint32_t uart1_baudrate = UART1_BAUDRATE_SLOW;
 
 /* UART configured as follows:
       - Word Length = 8 Bits (7 data bit + 1 parity bit) :
@@ -68,13 +67,13 @@ RETURN_STATUS uart_config(void)
 	HAL_NVIC_EnableIRQ(USARTUSB_IRQn);
 
 	Uart1Handle.Instance        = USARTUSB;
-	Uart1Handle.Init.BaudRate   = 115200;
+	Uart1Handle.Init.BaudRate   = uart1_baudrate;
 	Uart1Handle.Init.WordLength = UART_WORDLENGTH_8B;
 	Uart1Handle.Init.StopBits   = UART_STOPBITS_1;
 	Uart1Handle.Init.Parity     = UART_PARITY_NONE; //UART_PARITY_ODD;
 	Uart1Handle.Init.HwFlowCtl  = UART_HWCONTROL_NONE;
 	Uart1Handle.Init.Mode       = UART_MODE_TX_RX;
-	Uart1Handle.Init.OverSampling = UART_OVERSAMPLING_16;
+	Uart1Handle.Init.OverSampling = UART_OVERSAMPLING_8;
 
 	if(HAL_UART_Init(&Uart1Handle) != HAL_OK)
 	{
@@ -91,13 +90,17 @@ RETURN_STATUS uart_config(void)
 	Rx1.status = READYTORECEIVE;
 	Rx1.escape = FALSE;
 
-	uart1_send_message((uint8_t *)hello_message, strlen((const char *)hello_message));
+	return RETURN_OK;
+}
 
+RETURN_STATUS uart_hello(void)
+{
+	const uint8_t hello_message[] = "\n\r-= BeastH7! =-\r\n";
+	uart1_send_message((uint8_t *)hello_message, strlen((const char *)hello_message));
 	if(HAL_UART_Receive_IT(&Uart1Handle, (uint8_t *)Rx1.buffer, 1) != HAL_OK)
 	{
 		Error_Handler();
 	}
-
 	return RETURN_OK;
 }
 
@@ -379,4 +382,19 @@ void vprint(const char *fmt, va_list argp)
 	{
 		uart1_send_message(string, strlen(string));
 	}
+}
+
+RETURN_STATUS usart_set_baudrate(uint32_t baudrate)
+{
+	uart1_baudrate = baudrate;
+
+	if (uart_unconfig() == RETURN_OK)
+	{
+		if (uart_config() == RETURN_OK)
+		{
+			return RETURN_OK;
+		}
+	}
+
+	return RETURN_ERROR;
 }

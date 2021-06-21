@@ -51,6 +51,9 @@ static command_t cmd_cl_en = {(uint8_t *)&COMMAND_DELALL, &cmd_classen, TRUE};		
 static const uint8_t COMMAND_AUTO[] = "AUTO";
 static command_t cmd_cl_auto = {(uint8_t *)&COMMAND_AUTO, &cmd_auto, TRUE};			// spusteni automatickeho clasiffieru
 
+static const uint8_t COMMAND_UBR[] = "UBR*";
+static command_t cmd_ubr = {(uint8_t *)&COMMAND_UBR, &cmd_ubrate, TRUE};			// zmena rychlosti uartu
+
 
 
 
@@ -177,6 +180,17 @@ void commands_process(void)
 		{
 			// zavolani obsluzne funkce prikazu
 			p_func = cmd_cl_auto.p_itemfunc;
+			p_func(usart_get_rx_buffer());
+		}
+		return;
+	}
+	// parsing prikazu UBRx
+	else if (commands_parse((uint8_t *)&COMMAND_UBR, usart_get_rx_buffer()) == COMMANDOK)
+	{
+		if (cmd_ubr.enabled)
+		{
+			// zavolani obsluzne funkce prikazu
+			p_func = cmd_ubr.p_itemfunc;
 			p_func(usart_get_rx_buffer());
 		}
 		return;
@@ -773,3 +787,49 @@ CMD_RETURN command_auto(void *p_i)
 	}
 }
 
+// prikaz Baudrate
+COMMAND_STATUS cmd_ubrate(void *p_i)
+{
+	if (command_baudrate(p_i) == RETURN_ERROR)
+	{
+		return COMMANDWRONG;
+	}
+	return COMMANDOK;
+}
+
+CMD_RETURN command_baudrate(void *p_i)
+{
+	uint8_t *p_char = (uint8_t *)p_i;
+
+	// prikaz ma tvar "UBRx", kde x je znak L nebo H
+	uint8_t i;
+
+#define CHAR_0		(3)
+
+	// test na znak L nebo H
+	if (p_char[CHAR_0] == 'L')
+	{
+		if (usart_set_baudrate(UART1_BAUDRATE_SLOW) == RETURN_OK)
+		{
+			commands_ok_cmd();
+			return RETURN_OK;
+		}
+	}
+	else if (p_char[CHAR_0] == 'H')
+	{
+		if (usart_set_baudrate(UART1_BAUDRATE_FAST) == RETURN_OK)
+		{
+			commands_ok_cmd();
+			return RETURN_OK;
+		}
+	}
+	else
+	{
+		commands_wrong_cmd();
+		return RETURN_ERROR;
+	}
+
+#undef CHAR_3
+
+	return RETURN_OK;
+}
